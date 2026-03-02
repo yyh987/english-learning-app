@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>English Listening Practice</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app-shell" id="app">
+      <section id="home-page" class="page">
+        <div class="panel hero">
+          <p class="eyebrow">Listening + Typing</p>
+          <h1>Sentence Rebuild Practice</h1>
+          <p>
+            Listen to a sentence and type it back. You can submit the full sentence
+            at once or one word at a time. You get 10 points for a fully correct
+            sentence.
+          </p>
+          <button id="start-btn" class="btn btn-primary" type="button">
+            Start Practice
+          </button>
+        </div>
+      </section>
+
+      <section id="practice-page" class="page" hidden>
+        <header class="panel header-panel">
+          <div class="row row-space">
+            <p id="question-counter" class="stat">Question 1/1</p>
+            <p id="live-score" class="stat">Score: 0</p>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+        </header>
+
+        <section class="panel practice-panel">
+          <h2 id="practice-title">Listen and rebuild the sentence</h2>
+
+          <div class="listen-controls">
+            <button id="play-btn" class="btn btn-soft" type="button">
+              Play Sentence
+            </button>
+            <button id="repeat-btn" class="btn btn-soft" type="button">
+              Repeat
+            </button>
+            <button id="show-answer-btn" class="btn btn-soft" type="button">
+              Show Answer
+            </button>
+            <label class="speed-control" for="speed-range">
+              Speed
+              <input
+                id="speed-range"
+                type="range"
+                min="0.7"
+                max="1.2"
+                step="0.1"
+                value="0.9"
+              />
+              <span id="speed-value">0.9x</span>
+            </label>
+            <label class="voice-control" for="voice-select">
+              Voice
+              <select id="voice-select" aria-label="Text to speech voice">
+                <option value="us_male">American Male</option>
+                <option value="us_female" selected>American Female</option>
+                <option value="uk_male">English Male</option>
+                <option value="uk_female">English Female</option>
+              </select>
+            </label>
+          </div>
+
+          <form id="word-form" class="word-form" autocomplete="off">
+            <label for="word-input" class="sr-only">Enter sentence text</label>
+            <input
+              id="word-input"
+              type="text"
+              inputmode="text"
+              placeholder="Type the sentence (or next word)"
+              maxlength="240"
+            />
+            <button id="submit-word-btn" class="btn btn-primary" type="submit">
+              Submit
+            </button>
+          </form>
+
+          <div id="chips" class="chips" aria-live="polite"></div>
+          <p id="feedback" class="feedback" aria-live="polite"></p>
+          <p id="answer-text" class="answer-text" aria-live="polite"></p>
+
+          <div class="row row-end">
+            <button id="next-btn" class="btn btn-primary" type="button" hidden>
+              Next Question
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section id="result-page" class="page" hidden>
+        <div class="panel result-panel">
+          <p class="eyebrow">Session Complete</p>
+          <h2>Final Score</h2>
+          <p id="final-score" class="final-score">0</p>
+          <p id="final-meta" class="final-meta"></p>
+          <button id="restart-btn" class="btn btn-primary" type="button">
+            Restart
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <script src="question.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
