@@ -8,22 +8,13 @@
 </head>
 <body>
   <div class="container">
-    <!-- Home -->
     <section id="home" class="card">
       <h1>Academic Sentence Trainer</h1>
-      <p class="sub">Listen, then type the sentence word by word.</p>
-
-      <label class="label">Level</label>
-      <select id="levelSelect" class="select">
-        <option value="easy">Easy</option>
-        <option value="mid">Mid</option>
-        <option value="hard">Hard</option>
-      </select>
+      <p class="sub">Listen, then type the full sentence.</p>
 
       <button id="startBtn" class="btn primary">Start</button>
     </section>
 
-    <!-- Practice -->
     <section id="practice" class="card hidden">
       <div class="topbar">
         <div>Score: <span id="score">0</span></div>
@@ -44,14 +35,13 @@
         </label>
       </div>
 
-      <div class="chips" id="chips"></div>
-
       <div class="inputRow">
-        <input id="wordInput" class="input" placeholder="Type the next word…" autocomplete="off" />
-        <button id="addBtn" class="btn primary">Add</button>
+        <input id="wordInput" class="input" placeholder="input your answer" autocomplete="off" />
+        <button id="addBtn" class="btn primary">Check</button>
         <button id="undoBtn" class="btn">Undo</button>
       </div>
 
+      <div id="answerReveal" class="answerReveal hidden"></div>
       <div id="feedback" class="feedback"></div>
 
       <div class="bottomRow">
@@ -61,7 +51,6 @@
       </div>
     </section>
 
-    <!-- Result -->
     <section id="result" class="card hidden">
       <h2>Result</h2>
       <p>Your score: <span id="finalScore">0</span></p>

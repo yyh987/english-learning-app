@@ -1,10 +1,13 @@
-// app.js
+const POINTS_PER_QUESTION = 10;
+const AUTO_NEXT_DELAY_MS = 800;
+const AUTO_PLAY_COUNT = 2;
+
 let score = 0;
 let qIndex = 0;
-
-let currentTokens = [];
-let userTokens = [];   // typed tokens
-let tokenStates = [];  // "correct" | "wrong"
+let autoNextTimerId = null;
+let questionLocked = true;
+let speechRunId = 0;
+let answerRevealed = false;
 
 const home = document.getElementById("home");
 const practice = document.getElementById("practice");
@@ -18,10 +21,10 @@ const repeatBtn = document.getElementById("repeatBtn");
 const rateSlider = document.getElementById("rate");
 const rateVal = document.getElementById("rateVal");
 
-const chipsEl = document.getElementById("chips");
 const wordInput = document.getElementById("wordInput");
 const addBtn = document.getElementById("addBtn");
 const undoBtn = document.getElementById("undoBtn");
+const answerRevealEl = document.getElementById("answerReveal");
 
 const skipBtn = document.getElementById("skipBtn");
 const showBtn = document.getElementById("showBtn");
@@ -36,204 +39,312 @@ const progressFill = document.getElementById("progress-fill");
 const finalScoreEl = document.getElementById("finalScore");
 const badgeEl = document.getElementById("badge");
 
+function clearAutoNextTimer() {
+  if (autoNextTimerId !== null) {
+    clearTimeout(autoNextTimerId);
+    autoNextTimerId = null;
+  }
+}
+
+function cancelSpeech() {
+  speechRunId += 1;
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+}
+
 function tokenize(sentence) {
-  // Keep punctuation attached (assignment. / tired,)
-  return sentence.trim().split(/\s+/);
+  return sentence.trim().split(/\s+/).filter(Boolean);
+}
+
+function stripEdgePunctuation(word) {
+  return word.replace(/^[^\w']+|[^\w']+$/g, "");
 }
 
 function normalizeWord(word) {
-  // Compare case-insensitively, but keep punctuation in comparison.
-  return word.trim().toLowerCase();
+  return stripEdgePunctuation(word.trim()).toLowerCase();
 }
 
-function setFeedback(msg, type = "") {
+function normalizeSentence(sentence) {
+  return tokenize(sentence).map(normalizeWord).join(" ");
+}
+
+function getCurrentQuestion() {
+  return listeningQuestions[qIndex] || null;
+}
+
+function setQuestionLocked(locked) {
+  questionLocked = locked;
+  wordInput.disabled = locked;
+  addBtn.disabled = locked;
+  undoBtn.disabled = locked;
+}
+
+function setFeedback(message, type = "") {
   feedbackEl.className = "feedback";
-  if (type === "good") feedbackEl.classList.add("good");
-  if (type === "bad") feedbackEl.classList.add("bad");
-  feedbackEl.textContent = msg;
+
+  if (type === "good") {
+    feedbackEl.classList.add("good");
+  }
+
+  if (type === "bad") {
+    feedbackEl.classList.add("bad");
+  }
+
+  feedbackEl.textContent = message;
 }
 
-function renderChips() {
-  chipsEl.innerHTML = "";
-  userTokens.forEach((w, i) => {
-    const chip = document.createElement("div");
-    chip.className = "chip";
-    if (tokenStates[i] === "correct") chip.classList.add("correct");
-    if (tokenStates[i] === "wrong") chip.classList.add("wrong");
-    chip.textContent = w;
-    chipsEl.appendChild(chip);
-  });
+function hideAnswerReveal() {
+  answerRevealed = false;
+  answerRevealEl.textContent = "";
+  answerRevealEl.classList.add("hidden");
+}
+
+function showAnswerReveal(sentence) {
+  answerRevealed = true;
+  answerRevealEl.textContent = `Answer: ${sentence}`;
+  answerRevealEl.classList.remove("hidden");
 }
 
 function updateProgress() {
-  const pct = Math.round(((qIndex) / listeningQuestions.length) * 100);
+  const total = listeningQuestions.length;
+  const pct = total === 0 ? 0 : Math.round((qIndex / total) * 100);
   progressFill.style.width = `${pct}%`;
 }
 
 function updateTop() {
   scoreEl.textContent = score.toString();
-  qIndexEl.textContent = (qIndex + 1).toString();
+  qIndexEl.textContent = listeningQuestions.length === 0 ? "0" : (qIndex + 1).toString();
   qTotalEl.textContent = listeningQuestions.length.toString();
 }
 
-function speakSentence(sentence) {
+function speakSentence(sentence, repeatCount = 1) {
   if (!("speechSynthesis" in window)) {
-    setFeedback("Your browser doesn't support text-to-speech. (Still OK for demo)", "bad");
+    setFeedback("Your browser does not support text to speech.", "bad");
     return;
   }
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(sentence);
-  utter.rate = parseFloat(rateSlider.value);
-  utter.lang = "en-US"; // you can change to en-GB if you prefer
-  window.speechSynthesis.speak(utter);
+
+  cancelSpeech();
+  const currentRunId = speechRunId;
+
+  function speakRemaining(remaining) {
+    if (currentRunId !== speechRunId) {
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(sentence);
+    utterance.rate = parseFloat(rateSlider.value);
+    utterance.lang = "en-US";
+    utterance.onend = () => {
+      if (currentRunId !== speechRunId) {
+        return;
+      }
+
+      if (remaining > 1) {
+        speakRemaining(remaining - 1);
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  speakRemaining(repeatCount);
 }
 
 function loadQuestion() {
-  const q = listeningQuestions[qIndex];
-  currentTokens = tokenize(q.sentence);
+  clearAutoNextTimer();
+  cancelSpeech();
 
-  userTokens = [];
-  tokenStates = [];
-  renderChips();
-
-  nextBtn.classList.add("hidden");
-  setFeedback("Press Play, then type the first word.", "");
-  updateTop();
-  updateProgress();
-
-  // auto-play once at start of question (optional)
-  // speakSentence(q.sentence);
-
-  wordInput.value = "";
-  wordInput.focus();
-}
-
-function checkCompletion() {
-  if (userTokens.length !== currentTokens.length) return false;
-
-  // If all correct, finish question
-  const allCorrect = tokenStates.every(s => s === "correct");
-  if (allCorrect) {
-    score += 10;
-    scoreEl.textContent = score.toString();
-    setFeedback("Perfect! ✅ Click Next.", "good");
-    nextBtn.classList.remove("hidden");
-    return true;
-  }
-  return false;
-}
-
-function addWord() {
-  const raw = wordInput.value.trim();
-  if (!raw) return;
-
-  const expected = currentTokens[userTokens.length];
-  if (expected === undefined) {
-    setFeedback("You already completed the sentence. Click Next.", "good");
-    wordInput.value = "";
+  const question = getCurrentQuestion();
+  if (!question) {
+    finish();
     return;
   }
 
-  userTokens.push(raw);
-
-  const ok = normalizeWord(raw) === normalizeWord(expected);
-  tokenStates.push(ok ? "correct" : "wrong");
-
-  renderChips();
-
-  if (ok) {
-    setFeedback("Good. Next word.", "good");
-  } else {
-    // Minimal hint: show first letter of expected
-    const hint = expected ? expected[0] : "";
-    setFeedback(`Not quite. Hint: the next word starts with "${hint}".`, "bad");
-  }
+  hideAnswerReveal();
+  nextBtn.classList.add("hidden");
+  setQuestionLocked(false);
+  setFeedback("Press Play, then input your answer.");
+  updateTop();
+  updateProgress();
 
   wordInput.value = "";
   wordInput.focus();
-
-  checkCompletion();
+  speakSentence(question.sentence, AUTO_PLAY_COUNT);
 }
 
-function undoWord() {
-  if (userTokens.length === 0) return;
-  userTokens.pop();
-  tokenStates.pop();
-  renderChips();
-  setFeedback("Undone. Type again.", "");
+function markCorrect() {
+  score += POINTS_PER_QUESTION;
+  updateTop();
+  setFeedback("Correct. Moving to next...", "good");
+  setQuestionLocked(true);
+  nextBtn.classList.add("hidden");
+
+  clearAutoNextTimer();
+  autoNextTimerId = setTimeout(() => {
+    autoNextTimerId = null;
+    nextQuestion();
+  }, AUTO_NEXT_DELAY_MS);
+}
+
+function checkAnswer() {
+  if (questionLocked) {
+    return;
+  }
+
+  const question = getCurrentQuestion();
+  const answer = wordInput.value.trim();
+
+  if (!question || !answer) {
+    return;
+  }
+
+  if (normalizeSentence(answer) === normalizeSentence(question.sentence)) {
+    markCorrect();
+    return;
+  }
+
+  if (answerRevealed) {
+    setFeedback("Not quite. Compare your input with the answer below and try again.", "bad");
+  } else {
+    setFeedback("Not quite. Listen again or show the answer.", "bad");
+  }
+  wordInput.focus();
+  wordInput.select();
+}
+
+function undoInput() {
+  if (questionLocked) {
+    return;
+  }
+
+  const withoutTrailingSpaces = wordInput.value.replace(/\s+$/, "");
+  if (!withoutTrailingSpaces) {
+    setFeedback("Nothing to undo.");
+    wordInput.focus();
+    return;
+  }
+
+  wordInput.value = withoutTrailingSpaces.replace(/\S+\s*$/, "").trimEnd();
+  setFeedback("Last word removed.");
   wordInput.focus();
 }
 
 function showAnswer() {
-  // Reveal as chips in muted "wrong" for missing
-  while (userTokens.length < currentTokens.length) {
-    userTokens.push(currentTokens[userTokens.length]);
-    tokenStates.push("wrong");
+  clearAutoNextTimer();
+
+  const question = getCurrentQuestion();
+  if (!question) {
+    return;
   }
-  renderChips();
-  setFeedback("Answer revealed. Click Next.", "bad");
+
+  showAnswerReveal(question.sentence);
+  setQuestionLocked(false);
+  setFeedback("Answer revealed below. You can still input your answer.");
   nextBtn.classList.remove("hidden");
+  wordInput.focus();
 }
 
 function skipQuestion() {
-  setFeedback("Skipped. Click Next.", "");
-  nextBtn.classList.remove("hidden");
+  clearAutoNextTimer();
+  nextQuestion();
 }
 
 function nextQuestion() {
-  qIndex++;
+  clearAutoNextTimer();
+  cancelSpeech();
+
+  qIndex += 1;
+
   if (qIndex >= listeningQuestions.length) {
     finish();
-  } else {
-    loadQuestion();
+    return;
   }
+
+  loadQuestion();
 }
 
 function finish() {
+  clearAutoNextTimer();
+  cancelSpeech();
+  setQuestionLocked(true);
+  hideAnswerReveal();
+
   practice.classList.add("hidden");
   result.classList.remove("hidden");
+  progressFill.style.width = "100%";
 
   finalScoreEl.textContent = score.toString();
-  badgeEl.textContent = score >= 30 ? "Academic Starter" : "Beginner";
+
+  const maxScore = listeningQuestions.length * POINTS_PER_QUESTION;
+  const ratio = maxScore === 0 ? 0 : score / maxScore;
+
+  if (ratio === 1) {
+    badgeEl.textContent = "Academic Starter";
+  } else if (ratio >= 0.6) {
+    badgeEl.textContent = "Developing";
+  } else {
+    badgeEl.textContent = "Beginner";
+  }
 }
 
 startBtn.addEventListener("click", () => {
+  clearAutoNextTimer();
+  cancelSpeech();
+
   score = 0;
   qIndex = 0;
+
   home.classList.add("hidden");
   result.classList.add("hidden");
   practice.classList.remove("hidden");
+
+  if (listeningQuestions.length === 0) {
+    finish();
+    return;
+  }
+
   loadQuestion();
 });
 
 restartBtn.addEventListener("click", () => {
+  clearAutoNextTimer();
+  cancelSpeech();
+
   result.classList.add("hidden");
+  practice.classList.add("hidden");
   home.classList.remove("hidden");
+  hideAnswerReveal();
 });
 
-playBtn.addEventListener("click", () => {
-  speakSentence(listeningQuestions[qIndex].sentence);
-});
+function playCurrentSentence() {
+  const question = getCurrentQuestion();
 
-repeatBtn.addEventListener("click", () => {
-  speakSentence(listeningQuestions[qIndex].sentence);
-});
+  if (question) {
+    speakSentence(question.sentence);
+  }
+}
+
+playBtn.addEventListener("click", playCurrentSentence);
+repeatBtn.addEventListener("click", playCurrentSentence);
 
 rateSlider.addEventListener("input", () => {
   rateVal.textContent = parseFloat(rateSlider.value).toFixed(1);
 });
 
-addBtn.addEventListener("click", addWord);
-wordInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") addWord();
+addBtn.addEventListener("click", checkAnswer);
+wordInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    checkAnswer();
+  }
 });
 
-undoBtn.addEventListener("click", undoWord);
-
+undoBtn.addEventListener("click", undoInput);
 showBtn.addEventListener("click", showAnswer);
 skipBtn.addEventListener("click", skipQuestion);
 nextBtn.addEventListener("click", nextQuestion);
 
-// Init UI counts
-qTotalEl.textContent = listeningQuestions.length.toString();
+setQuestionLocked(true);
+updateTop();
 rateVal.textContent = parseFloat(rateSlider.value).toFixed(1);
