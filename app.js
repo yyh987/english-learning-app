@@ -1,6 +1,7 @@
 const POINTS_PER_QUESTION = 10;
 const AUTO_NEXT_DELAY_MS = 800;
 const AUTO_PLAY_COUNT = 2;
+const REPEAT_PAUSE_MS = 900;
 
 let score = 0;
 let qIndex = 0;
@@ -8,6 +9,7 @@ let autoNextTimerId = null;
 let questionLocked = true;
 let speechRunId = 0;
 let answerRevealed = false;
+let speechRepeatTimerId = null;
 
 const home = document.getElementById("home");
 const practice = document.getElementById("practice");
@@ -23,7 +25,7 @@ const rateVal = document.getElementById("rateVal");
 
 const wordInput = document.getElementById("wordInput");
 const addBtn = document.getElementById("addBtn");
-const undoBtn = document.getElementById("undoBtn");
+const clearBtn = document.getElementById("clearBtn");
 const answerRevealEl = document.getElementById("answerReveal");
 
 const skipBtn = document.getElementById("skipBtn");
@@ -46,8 +48,16 @@ function clearAutoNextTimer() {
   }
 }
 
+function clearSpeechRepeatTimer() {
+  if (speechRepeatTimerId !== null) {
+    clearTimeout(speechRepeatTimerId);
+    speechRepeatTimerId = null;
+  }
+}
+
 function cancelSpeech() {
   speechRunId += 1;
+  clearSpeechRepeatTimer();
 
   if ("speechSynthesis" in window) {
     window.speechSynthesis.cancel();
@@ -78,7 +88,7 @@ function setQuestionLocked(locked) {
   questionLocked = locked;
   wordInput.disabled = locked;
   addBtn.disabled = locked;
-  undoBtn.disabled = locked;
+  clearBtn.disabled = locked;
 }
 
 function setFeedback(message, type = "") {
@@ -142,7 +152,15 @@ function speakSentence(sentence, repeatCount = 1) {
       }
 
       if (remaining > 1) {
-        speakRemaining(remaining - 1);
+        speechRepeatTimerId = setTimeout(() => {
+          speechRepeatTimerId = null;
+
+          if (currentRunId !== speechRunId) {
+            return;
+          }
+
+          speakRemaining(remaining - 1);
+        }, REPEAT_PAUSE_MS);
       }
     };
 
@@ -214,20 +232,15 @@ function checkAnswer() {
   wordInput.select();
 }
 
-function undoInput() {
+function clearInput() {
   if (questionLocked) {
     return;
   }
 
-  const withoutTrailingSpaces = wordInput.value.replace(/\s+$/, "");
-  if (!withoutTrailingSpaces) {
-    setFeedback("Nothing to undo.");
-    wordInput.focus();
-    return;
-  }
-
-  wordInput.value = withoutTrailingSpaces.replace(/\S+\s*$/, "").trimEnd();
-  setFeedback("Last word removed.");
+  wordInput.value = "";
+  hideAnswerReveal();
+  nextBtn.classList.add("hidden");
+  setFeedback("Press Play, then input your answer.");
   wordInput.focus();
 }
 
@@ -340,7 +353,7 @@ wordInput.addEventListener("keydown", (event) => {
   }
 });
 
-undoBtn.addEventListener("click", undoInput);
+clearBtn.addEventListener("click", clearInput);
 showBtn.addEventListener("click", showAnswer);
 skipBtn.addEventListener("click", skipQuestion);
 nextBtn.addEventListener("click", nextQuestion);
