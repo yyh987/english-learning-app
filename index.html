@@ -1,115 +1,76 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>English Listening Practice</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <main class="app-shell" id="app">
-      <section id="home-page" class="page">
-        <div class="panel hero">
-          <p class="eyebrow">Listening + Typing</p>
-          <h1>Sentence Rebuild Practice</h1>
-          <p>
-            Listen to a sentence and type it back. You can submit the full sentence
-            at once or one word at a time. You get 10 points for a fully correct
-            sentence.
-          </p>
-          <button id="start-btn" class="btn btn-primary" type="button">
-            Start Practice
-          </button>
-        </div>
-      </section>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academic Sentence Trainer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- Home -->
+    <section id="home" class="card">
+      <h1>Academic Sentence Trainer</h1>
+      <p class="sub">Listen, then type the sentence word by word.</p>
 
-      <section id="practice-page" class="page" hidden>
-        <header class="panel header-panel">
-          <div class="row row-space">
-            <p id="question-counter" class="stat">Question 1/1</p>
-            <p id="live-score" class="stat">Score: 0</p>
-          </div>
-          <div class="progress-track" aria-hidden="true">
-            <div id="progress-fill" class="progress-fill"></div>
-          </div>
-        </header>
+      <label class="label">Level</label>
+      <select id="levelSelect" class="select">
+        <option value="easy">Easy</option>
+        <option value="mid">Mid</option>
+        <option value="hard">Hard</option>
+      </select>
 
-        <section class="panel practice-panel">
-          <h2 id="practice-title">Listen and rebuild the sentence</h2>
+      <button id="startBtn" class="btn primary">Start</button>
+    </section>
 
-          <div class="listen-controls">
-            <button id="play-btn" class="btn btn-soft" type="button">
-              Play Sentence
-            </button>
-            <button id="repeat-btn" class="btn btn-soft" type="button">
-              Repeat
-            </button>
-            <button id="show-answer-btn" class="btn btn-soft" type="button">
-              Show Answer
-            </button>
-            <label class="speed-control" for="speed-range">
-              Speed
-              <input
-                id="speed-range"
-                type="range"
-                min="0.7"
-                max="1.2"
-                step="0.1"
-                value="0.9"
-              />
-              <span id="speed-value">0.9x</span>
-            </label>
-            <label class="voice-control" for="voice-select">
-              Voice
-              <select id="voice-select" aria-label="Text to speech voice">
-                <option value="us_male">American Male</option>
-                <option value="us_female" selected>American Female</option>
-                <option value="uk_male">English Male</option>
-                <option value="uk_female">English Female</option>
-              </select>
-            </label>
-          </div>
+    <!-- Practice -->
+    <section id="practice" class="card hidden">
+      <div class="topbar">
+        <div>Score: <span id="score">0</span></div>
+        <div>Q: <span id="qIndex">1</span>/<span id="qTotal">1</span></div>
+      </div>
 
-          <form id="word-form" class="word-form" autocomplete="off">
-            <label for="word-input" class="sr-only">Enter sentence text</label>
-            <input
-              id="word-input"
-              type="text"
-              inputmode="text"
-              placeholder="Type the sentence (or next word)"
-              maxlength="240"
-            />
-            <button id="submit-word-btn" class="btn btn-primary" type="submit">
-              Submit
-            </button>
-          </form>
+      <div class="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
 
-          <div id="chips" class="chips" aria-live="polite"></div>
-          <p id="feedback" class="feedback" aria-live="polite"></p>
-          <p id="answer-text" class="answer-text" aria-live="polite"></p>
+      <div class="audioRow">
+        <button id="playBtn" class="btn">▶ Play</button>
+        <button id="repeatBtn" class="btn">↻ Repeat</button>
+        <label class="tiny">
+          Speed:
+          <input id="rate" type="range" min="0.7" max="1.2" step="0.1" value="1" />
+          <span id="rateVal">1.0</span>x
+        </label>
+      </div>
 
-          <div class="row row-end">
-            <button id="next-btn" class="btn btn-primary" type="button" hidden>
-              Next Question
-            </button>
-          </div>
-        </section>
-      </section>
+      <div class="chips" id="chips"></div>
 
-      <section id="result-page" class="page" hidden>
-        <div class="panel result-panel">
-          <p class="eyebrow">Session Complete</p>
-          <h2>Final Score</h2>
-          <p id="final-score" class="final-score">0</p>
-          <p id="final-meta" class="final-meta"></p>
-          <button id="restart-btn" class="btn btn-primary" type="button">
-            Restart
-          </button>
-        </div>
-      </section>
-    </main>
+      <div class="inputRow">
+        <input id="wordInput" class="input" placeholder="Type the next word…" autocomplete="off" />
+        <button id="addBtn" class="btn primary">Add</button>
+        <button id="undoBtn" class="btn">Undo</button>
+      </div>
 
-    <script src="question.js"></script>
-    <script src="app.js"></script>
-  </body>
+      <div id="feedback" class="feedback"></div>
+
+      <div class="bottomRow">
+        <button id="skipBtn" class="btn">Skip</button>
+        <button id="showBtn" class="btn danger">Show Answer</button>
+        <button id="nextBtn" class="btn primary hidden">Next</button>
+      </div>
+    </section>
+
+    <!-- Result -->
+    <section id="result" class="card hidden">
+      <h2>Result</h2>
+      <p>Your score: <span id="finalScore">0</span></p>
+      <p>Badge: <span id="badge">Beginner</span></p>
+      <button id="restartBtn" class="btn primary">Restart</button>
+    </section>
+  </div>
+
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+</body>
 </html>
