@@ -3,22 +3,105 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Academic Sentence Trainer</title>
+  <title>LingoDictation | Listening Practice Demo</title>
+  <meta
+    name="description"
+    content="LingoDictation is a polished browser demo for English listening practice, built for student pilots, tutoring sessions, and future iPad delivery."
+  />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <section id="home" class="card">
-      <h1>Academic Sentence Trainer</h1>
-      <p class="sub">Listen, then type the full sentence.</p>
+    <section id="home" class="card heroCard">
+      <div class="heroGrid">
+        <div class="heroCopy">
+          <span class="eyebrow">LingoDictation Demo</span>
+          <h1>Make listening practice feel like a real language product.</h1>
+          <p class="sub">
+            A polished dictation demo for tutors, schools, and student pilots. Audio plays automatically,
+            answers are checked instantly, and the experience is ready to share on the web now and on iPad later.
+          </p>
 
-      <button id="startBtn" class="btn primary">Start</button>
+          <div class="ctaRow">
+            <button id="startBtn" class="btn primary">Launch Demo</button>
+            <a class="btn secondary" href="#featureGrid">See Features</a>
+          </div>
+
+          <div class="signalRow">
+            <span class="signalPill">Academic English</span>
+            <span class="signalPill">Browser-first</span>
+            <span class="signalPill">iPad-ready concept</span>
+          </div>
+        </div>
+
+        <div class="heroVisual">
+          <div class="visualCard">
+            <div class="visualTop">
+              <span class="visualBadge">Student mode</span>
+              <span class="visualTag">Commercial-ready demo</span>
+            </div>
+            <p class="visualQuote">Listen twice. Type once. Improve faster.</p>
+            <div class="visualStats">
+              <div class="statBlock">
+                <strong>2x</strong>
+                <span>automatic playback</span>
+              </div>
+              <div class="statBlock">
+                <strong>1</strong>
+                <span>clean answer input</span>
+              </div>
+              <div class="statBlock">
+                <strong>Instant</strong>
+                <span>feedback + reveal</span>
+              </div>
+            </div>
+            <div class="visualList">
+              <div class="visualItem">Replay and speed control for guided practice</div>
+              <div class="visualItem">Answer reveal for tutoring and self-study</div>
+              <div class="visualItem">Simple scoring to support classroom demos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="featureGrid" class="featureGrid">
+        <article class="featureCard">
+          <span class="featureKicker">01</span>
+          <h2>Built to share quickly</h2>
+          <p>Open it in a browser, send a clean link, and let students start without installs or logins.</p>
+        </article>
+        <article class="featureCard">
+          <span class="featureKicker">02</span>
+          <h2>Low-friction listening flow</h2>
+          <p>Students hear the sentence twice, replay when needed, and answer in a single focused input.</p>
+        </article>
+        <article class="featureCard">
+          <span class="featureKicker">03</span>
+          <h2>Ready for the next version</h2>
+          <p>The same concept can evolve into a fuller classroom product and later into an iPad app experience.</p>
+        </article>
+      </div>
     </section>
 
-    <section id="practice" class="card hidden">
-      <div class="topbar">
-        <div>Score: <span id="score">0</span></div>
-        <div>Q: <span id="qIndex">1</span>/<span id="qTotal">1</span></div>
+    <section id="practice" class="card practiceCard hidden">
+      <div class="practiceHeader">
+        <div>
+          <span class="eyebrow">Live listening drill</span>
+          <h2>Train sentence accuracy with guided repetition.</h2>
+          <p class="practiceSub">
+            The sentence plays automatically, students can replay or slow it down, and the answer can be revealed when needed.
+          </p>
+        </div>
+        <div class="topbar">
+          <div class="metricCard">
+            <span class="metricLabel">Score</span>
+            <span class="metricValue" id="score">0</span>
+          </div>
+          <div class="metricCard">
+            <span class="metricLabel">Question</span>
+            <span class="metricValue"><span id="qIndex">1</span>/<span id="qTotal">1</span></span>
+          </div>
+        </div>
       </div>
 
       <div class="progress-bar">
@@ -51,11 +134,23 @@
       </div>
     </section>
 
-    <section id="result" class="card hidden">
-      <h2>Result</h2>
-      <p>Your score: <span id="finalScore">0</span></p>
-      <p>Badge: <span id="badge">Beginner</span></p>
-      <button id="restartBtn" class="btn primary">Restart</button>
+    <section id="result" class="card resultCard hidden">
+      <span class="eyebrow">Session complete</span>
+      <h2>Commercial demo, validated.</h2>
+      <p class="resultSub">
+        You now have a working listening flow that is much easier to present to schools, tutors, and early pilot users.
+      </p>
+      <div class="resultGrid">
+        <div class="resultMetric">
+          <span class="metricLabel">Final score</span>
+          <span class="resultValue" id="finalScore">0</span>
+        </div>
+        <div class="resultMetric">
+          <span class="metricLabel">Performance badge</span>
+          <span class="resultBadge" id="badge">Warm-Up Mode</span>
+        </div>
+      </div>
+      <button id="restartBtn" class="btn primary">Run Another Demo</button>
     </section>
   </div>
 

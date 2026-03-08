@@ -131,7 +131,7 @@ function updateTop() {
 
 function speakSentence(sentence, repeatCount = 1) {
   if (!("speechSynthesis" in window)) {
-    setFeedback("Your browser does not support text to speech.", "bad");
+    setFeedback("This browser does not support text to speech for the demo.", "bad");
     return;
   }
 
@@ -183,7 +183,7 @@ function loadQuestion() {
   hideAnswerReveal();
   nextBtn.classList.add("hidden");
   setQuestionLocked(false);
-  setFeedback("Press Play, then input your answer.");
+  setFeedback("Audio starts automatically. Type the full sentence when ready.");
   updateTop();
   updateProgress();
 
@@ -195,7 +195,7 @@ function loadQuestion() {
 function markCorrect() {
   score += POINTS_PER_QUESTION;
   updateTop();
-  setFeedback("Correct. Moving to next...", "good");
+  setFeedback("Correct. Loading the next sentence...", "good");
   setQuestionLocked(true);
   nextBtn.classList.add("hidden");
 
@@ -226,7 +226,7 @@ function checkAnswer() {
   if (answerRevealed) {
     setFeedback("Not quite. Compare your input with the answer below and try again.", "bad");
   } else {
-    setFeedback("Not quite. Listen again or show the answer.", "bad");
+    setFeedback("Close. Replay the audio or reveal the answer for support.", "bad");
   }
   wordInput.focus();
   wordInput.select();
@@ -240,7 +240,7 @@ function clearInput() {
   wordInput.value = "";
   hideAnswerReveal();
   nextBtn.classList.add("hidden");
-  setFeedback("Press Play, then input your answer.");
+  setFeedback("Cleared. Audio starts automatically on each new sentence.");
   wordInput.focus();
 }
 
@@ -254,7 +254,7 @@ function showAnswer() {
 
   showAnswerReveal(question.sentence);
   setQuestionLocked(false);
-  setFeedback("Answer revealed below. You can still input your answer.");
+  setFeedback("Answer revealed below. Students can still keep typing.");
   nextBtn.classList.remove("hidden");
   wordInput.focus();
 }
@@ -294,11 +294,11 @@ function finish() {
   const ratio = maxScore === 0 ? 0 : score / maxScore;
 
   if (ratio === 1) {
-    badgeEl.textContent = "Academic Starter";
+    badgeEl.textContent = "Focused Listener";
   } else if (ratio >= 0.6) {
-    badgeEl.textContent = "Developing";
+    badgeEl.textContent = "Building Accuracy";
   } else {
-    badgeEl.textContent = "Beginner";
+    badgeEl.textContent = "Warm-Up Mode";
   }
 }
 
