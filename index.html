@@ -8,7 +8,7 @@
     name="description"
     content="LingoDictation is a polished browser demo for English listening practice, built for student pilots, tutoring sessions, and future iPad delivery."
   />
-  <link rel="stylesheet" href="style.css?v=20260308a" />
+  <link rel="stylesheet" href="style.css?v=20260309a" />
 </head>
 <body>
   <div class="container">
@@ -83,14 +83,33 @@
       </div>
     </section>
 
+    <section id="library" class="card libraryCard hidden">
+      <div class="libraryHeader">
+        <div>
+          <span class="eyebrow">Textbook Library</span>
+          <h2>Choose a textbook before you begin.</h2>
+          <p class="practiceSub">
+            Each collection has its own tone, level, and sentence bank, so the same demo can feel closer to a school product catalog.
+          </p>
+        </div>
+        <button id="libraryBackBtn" class="btn secondary">Back to Home</button>
+      </div>
+
+      <div id="textbookGrid" class="textbookGrid"></div>
+    </section>
+
     <section id="practice" class="card practiceCard hidden">
       <div class="practiceHeader">
         <div>
-          <span class="eyebrow">Live listening drill</span>
-          <h2>Train sentence accuracy with guided repetition.</h2>
-          <p class="practiceSub">
+          <span class="eyebrow" id="practiceEyebrow">Live listening drill</span>
+          <h2 id="practiceTitle">Train sentence accuracy with guided repetition.</h2>
+          <p class="practiceSub" id="practiceDescription">
             The sentence plays automatically, students can replay or slow it down, and the answer can be revealed when needed.
           </p>
+          <div class="selectionSummary">
+            <span class="summaryPill" id="selectedTextbookName">Selected textbook</span>
+            <span class="summaryPill" id="selectedTextbookMeta">0 drills</span>
+          </div>
         </div>
         <div class="topbar">
           <div class="metricCard">
@@ -140,6 +159,7 @@
       <p class="resultSub">
         You now have a working listening flow that is much easier to present to schools, tutors, and early pilot users.
       </p>
+      <p class="resultBook" id="resultTextbook">Textbook: Selected collection</p>
       <div class="resultGrid">
         <div class="resultMetric">
           <span class="metricLabel">Final score</span>
@@ -150,11 +170,11 @@
           <span class="resultBadge" id="badge">Warm-Up Mode</span>
         </div>
       </div>
-      <button id="restartBtn" class="btn primary">Run Another Demo</button>
+      <button id="restartBtn" class="btn primary">Choose Another Textbook</button>
     </section>
   </div>
 
-  <script src="questions.js?v=20260308a"></script>
-  <script src="app.js?v=20260308a"></script>
+  <script src="questions.js?v=20260309a"></script>
+  <script src="app.js?v=20260309a"></script>
 </body>
 </html>
