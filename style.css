@@ -538,6 +538,18 @@ h3{
   background:rgba(255, 255, 255, 0.6);
 }
 
+.btn.accent{
+  color:#f6fbfc;
+  background:linear-gradient(135deg, #1f4664, #132f46);
+  border-color:transparent;
+  box-shadow:0 14px 28px rgba(23, 32, 51, 0.16);
+}
+
+.btn.accent:hover{
+  background:linear-gradient(135deg, #285372, #17374f);
+  border-color:transparent;
+}
+
 .btn.danger{
   color:var(--accent);
   background:rgba(212, 102, 73, 0.08);
@@ -569,6 +581,52 @@ h3{
 
 .feedback.bad{
   color:var(--bad);
+}
+
+.aiHintCard{
+  margin:0 0 18px;
+  padding:18px 20px;
+  border-radius:24px;
+  background:linear-gradient(180deg, rgba(22, 54, 79, 0.08), rgba(22, 54, 79, 0.14));
+  border:1px solid rgba(31, 70, 100, 0.18);
+}
+
+.aiHintHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.aiHintBadge,
+.aiHintMeta{
+  display:inline-flex;
+  align-items:center;
+  min-height:32px;
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.aiHintBadge{
+  background:rgba(31, 70, 100, 0.12);
+  color:#183952;
+}
+
+.aiHintMeta{
+  background:rgba(255, 255, 255, 0.65);
+  color:var(--muted);
+}
+
+.aiHintText{
+  margin:14px 0 0;
+  color:var(--ink);
+  line-height:1.7;
+  font-weight:600;
 }
 
 .resultGrid{

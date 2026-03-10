@@ -3,6 +3,10 @@ const AUTO_NEXT_DELAY_MS = 800;
 const AUTO_PLAY_COUNT = 2;
 const REPEAT_PAUSE_MS = 900;
 const TEXTBOOK_CONTENT_URL = "data/textbooks.json?v=20260310a";
+const AI_HINT_API_URL =
+  window.LingoDictationConfig && typeof window.LingoDictationConfig.aiHintUrl === "string"
+    ? window.LingoDictationConfig.aiHintUrl
+    : "";
 
 let score = 0;
 let qIndex = 0;
@@ -15,6 +19,9 @@ let currentTextbook = null;
 let activeQuestions = [];
 let textbookCollections = [];
 let textbookCollectionPromise = null;
+let aiHintLoading = false;
+let aiHintRequestId = 0;
+const aiHintCache = new Map();
 
 const home = document.getElementById("home");
 const library = document.getElementById("library");
@@ -36,6 +43,10 @@ const clearBtn = document.getElementById("clearBtn");
 const answerRevealEl = document.getElementById("answerReveal");
 const textbookGrid = document.getElementById("textbookGrid");
 const homeStatusEl = document.getElementById("homeStatus");
+const aiHintBtn = document.getElementById("aiHintBtn");
+const aiHintPanel = document.getElementById("aiHintPanel");
+const aiHintTextEl = document.getElementById("aiHintText");
+const aiHintMetaEl = document.getElementById("aiHintMeta");
 
 const skipBtn = document.getElementById("skipBtn");
 const showBtn = document.getElementById("showBtn");
@@ -113,6 +124,7 @@ function setQuestionLocked(locked) {
   wordInput.disabled = locked;
   addBtn.disabled = locked;
   clearBtn.disabled = locked;
+  updateAiHintButtonState();
 }
 
 function setFeedback(message, type = "") {
@@ -144,6 +156,11 @@ function setStartButtonLoading(isLoading) {
   startBtn.textContent = isLoading ? "Loading..." : "Launch Demo";
 }
 
+function updateAiHintButtonState() {
+  aiHintBtn.disabled = questionLocked || aiHintLoading;
+  aiHintBtn.textContent = aiHintLoading ? "Thinking..." : "AI Hint";
+}
+
 function hideAnswerReveal() {
   answerRevealed = false;
   answerRevealEl.textContent = "";
@@ -154,6 +171,29 @@ function showAnswerReveal(sentence) {
   answerRevealed = true;
   answerRevealEl.textContent = `Answer: ${sentence}`;
   answerRevealEl.classList.remove("hidden");
+}
+
+function hideAiHint() {
+  aiHintPanel.classList.add("hidden");
+  aiHintTextEl.textContent = "";
+  aiHintMetaEl.textContent = "Guided support";
+}
+
+function showAiHint(text, meta = "Guided support") {
+  aiHintTextEl.textContent = text;
+  aiHintMetaEl.textContent = meta;
+  aiHintPanel.classList.remove("hidden");
+}
+
+function setAiHintLoading(isLoading) {
+  aiHintLoading = isLoading;
+  updateAiHintButtonState();
+}
+
+function resetAiHintState() {
+  aiHintRequestId += 1;
+  setAiHintLoading(false);
+  hideAiHint();
 }
 
 function updateProgress() {
@@ -186,6 +226,220 @@ function updateSelectedTextbookCopy() {
   selectedTextbookNameEl.textContent = currentTextbook.audience;
   selectedTextbookMetaEl.textContent = `${activeQuestions.length} drills · ${currentTextbook.level}`;
   resultTextbookEl.textContent = `Textbook: ${currentTextbook.title}`;
+}
+
+function getNormalizedWords(sentence) {
+  return tokenize(sentence).map(normalizeWord).filter(Boolean);
+}
+
+function getHintCacheKey(question, answer) {
+  const textbookId = currentTextbook ? currentTextbook.id : "default";
+  return `${textbookId}:${qIndex}:${normalizeSentence(question.sentence)}:${normalizeSentence(answer)}`;
+}
+
+function getFirstMismatch(targetWords, answerWords) {
+  const maxLength = Math.min(targetWords.length, answerWords.length);
+
+  for (let index = 0; index < maxLength; index += 1) {
+    if (targetWords[index] !== answerWords[index]) {
+      return {
+        index,
+        type: "different",
+        targetWord: targetWords[index],
+        answerWord: answerWords[index]
+      };
+    }
+  }
+
+  if (answerWords.length < targetWords.length) {
+    return {
+      index: answerWords.length,
+      type: "missing",
+      targetWord: targetWords[answerWords.length],
+      answerWord: ""
+    };
+  }
+
+  if (answerWords.length > targetWords.length) {
+    return {
+      index: targetWords.length,
+      type: "extra",
+      targetWord: "",
+      answerWord: answerWords[targetWords.length]
+    };
+  }
+
+  return null;
+}
+
+function describeHintSlot(targetWords, index) {
+  if (index <= 0) {
+    return "the opening word";
+  }
+
+  if (index >= targetWords.length - 1) {
+    return "the final word";
+  }
+
+  return `the word after "${targetWords[index - 1]}"`;
+}
+
+function describeWordLength(word) {
+  if (word.length <= 4) {
+    return "short";
+  }
+
+  if (word.length <= 7) {
+    return "medium-length";
+  }
+
+  return "longer";
+}
+
+function buildLocalAiHint(question, answer) {
+  const targetWords = getNormalizedWords(question.sentence);
+  const answerWords = getNormalizedWords(answer);
+
+  if (!answerWords.length) {
+    return `Start with the opening phrase first. This sentence has ${targetWords.length} words, so catch the subject and verb before you worry about the ending.`;
+  }
+
+  if (normalizeSentence(answer) === normalizeSentence(question.sentence)) {
+    return "Your sentence already matches the target. Click Check to submit it.";
+  }
+
+  if (answerWords.length + 2 < targetWords.length) {
+    return "Your answer is much shorter than the target. Replay the audio and listen for the clause near the end before you submit again.";
+  }
+
+  if (answerWords.length > targetWords.length + 1) {
+    return "Your answer is longer than the target. Trim any extra word and match the exact sentence you hear.";
+  }
+
+  const mismatch = getFirstMismatch(targetWords, answerWords);
+
+  if (!mismatch) {
+    return "Listen once more for the sentence rhythm and punctuation, then submit the exact wording you hear.";
+  }
+
+  const slot = describeHintSlot(targetWords, mismatch.index);
+
+  if (mismatch.type === "extra") {
+    return `There is an extra word near ${slot}. Replay the audio and keep only the exact words you hear.`;
+  }
+
+  const clueWord = mismatch.targetWord;
+  const clueStarter = clueWord.charAt(0).toUpperCase();
+  const clueLength = describeWordLength(clueWord);
+
+  if (answerRevealed) {
+    return `Compare ${slot}. The correct word is a ${clueLength} word that starts with "${clueStarter}".`;
+  }
+
+  if (mismatch.type === "missing") {
+    return `You are close. A ${clueLength} word is missing at ${slot}, and it starts with "${clueStarter}".`;
+  }
+
+  return `Focus on ${slot}. It should be a ${clueLength} word that starts with "${clueStarter}", so revise that part instead of changing the whole sentence.`;
+}
+
+async function requestRemoteAiHint(question, answer) {
+  if (!AI_HINT_API_URL) {
+    return null;
+  }
+
+  const response = await fetch(AI_HINT_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      sentence: question.sentence,
+      answer,
+      questionIndex: qIndex,
+      textbook: currentTextbook
+        ? {
+            id: currentTextbook.id,
+            title: currentTextbook.title,
+            level: currentTextbook.level,
+            audience: currentTextbook.audience
+          }
+        : null
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`AI hint request failed (${response.status}).`);
+  }
+
+  const payload = await response.json();
+  return payload && typeof payload.hint === "string" ? payload.hint.trim() : null;
+}
+
+async function requestAiHint() {
+  if (questionLocked) {
+    return;
+  }
+
+  const question = getCurrentQuestion();
+  if (!question) {
+    return;
+  }
+
+  const answer = wordInput.value.trim();
+
+  if (normalizeSentence(answer) === normalizeSentence(question.sentence) && answer) {
+    showAiHint("Your sentence already matches the target. Click Check to submit it.", "Ready to submit");
+    setFeedback("Your answer looks correct. Submit it when ready.");
+    return;
+  }
+
+  const cacheKey = getHintCacheKey(question, answer);
+  const cachedHint = aiHintCache.get(cacheKey);
+
+  if (cachedHint) {
+    showAiHint(cachedHint.text, cachedHint.meta);
+    setFeedback("Use the hint, replay the sentence, and revise your answer.");
+    return;
+  }
+
+  aiHintRequestId += 1;
+  const currentRequestId = aiHintRequestId;
+  setAiHintLoading(true);
+  setFeedback(answer ? "Generating a targeted hint for this attempt..." : "Generating a first-pass hint...");
+
+  try {
+    let hint = null;
+    let meta = "AI-ready demo";
+
+    if (AI_HINT_API_URL) {
+      try {
+        hint = await requestRemoteAiHint(question, answer);
+        if (hint) {
+          meta = "AI coach";
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    if (!hint) {
+      hint = buildLocalAiHint(question, answer);
+    }
+
+    if (currentRequestId !== aiHintRequestId) {
+      return;
+    }
+
+    const hintPayload = { text: hint, meta };
+    aiHintCache.set(cacheKey, hintPayload);
+    showAiHint(hintPayload.text, hintPayload.meta);
+    setFeedback("Use the hint, replay the sentence, and revise your answer.");
+  } finally {
+    if (currentRequestId === aiHintRequestId) {
+      setAiHintLoading(false);
+    }
+  }
 }
 
 function normalizeTextbookCollections(payload) {
@@ -335,6 +589,7 @@ async function showLibrary() {
   clearAutoNextTimer();
   cancelSpeech();
   hideAnswerReveal();
+  resetAiHintState();
   setQuestionLocked(true);
   renderTextbookLibrary();
   showScreen(library);
@@ -351,6 +606,7 @@ function loadQuestion() {
   }
 
   hideAnswerReveal();
+  resetAiHintState();
   nextBtn.classList.add("hidden");
   setQuestionLocked(false);
   setFeedback("Audio starts automatically. Type the full sentence when ready.");
@@ -375,6 +631,7 @@ function startTextbook(textbookId) {
   activeQuestions = textbook.questions;
   score = 0;
   qIndex = 0;
+  aiHintCache.clear();
 
   updateSelectedTextbookCopy();
   showScreen(practice);
@@ -390,6 +647,7 @@ function startTextbook(textbookId) {
 function markCorrect() {
   score += POINTS_PER_QUESTION;
   updateTop();
+  resetAiHintState();
   setFeedback("Correct. Loading the next sentence...", "good");
   setQuestionLocked(true);
   nextBtn.classList.add("hidden");
@@ -435,6 +693,7 @@ function clearInput() {
 
   wordInput.value = "";
   hideAnswerReveal();
+  resetAiHintState();
   nextBtn.classList.add("hidden");
   setFeedback("Cleared. Audio starts automatically on each new sentence.");
   wordInput.focus();
@@ -479,6 +738,7 @@ function finish() {
   cancelSpeech();
   setQuestionLocked(true);
   hideAnswerReveal();
+  resetAiHintState();
   progressFill.style.width = "100%";
   updateSelectedTextbookCopy();
 
@@ -502,6 +762,7 @@ function showHome() {
   clearAutoNextTimer();
   cancelSpeech();
   hideAnswerReveal();
+  resetAiHintState();
   setQuestionLocked(true);
   showScreen(home);
 }
@@ -516,6 +777,7 @@ function playCurrentSentence() {
 
 async function initializeApp() {
   setQuestionLocked(true);
+  hideAiHint();
   updateSelectedTextbookCopy();
   updateTop();
   rateVal.textContent = parseFloat(rateSlider.value).toFixed(1);
@@ -541,6 +803,7 @@ wordInput.addEventListener("keydown", (event) => {
 });
 
 clearBtn.addEventListener("click", clearInput);
+aiHintBtn.addEventListener("click", requestAiHint);
 showBtn.addEventListener("click", showAnswer);
 skipBtn.addEventListener("click", skipQuestion);
 nextBtn.addEventListener("click", nextQuestion);

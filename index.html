@@ -8,7 +8,7 @@
     name="description"
     content="LingoDictation is a polished browser demo for English listening practice, built for student pilots, tutoring sessions, and future iPad delivery."
   />
-  <link rel="stylesheet" href="style.css?v=20260310a" />
+  <link rel="stylesheet" href="style.css?v=20260310b" />
 </head>
 <body>
   <div class="container">
@@ -146,9 +146,17 @@
 
       <div id="answerReveal" class="answerReveal hidden"></div>
       <div id="feedback" class="feedback"></div>
+      <div id="aiHintPanel" class="aiHintCard hidden">
+        <div class="aiHintHeader">
+          <span class="aiHintBadge">AI Hint</span>
+          <span id="aiHintMeta" class="aiHintMeta">Guided support</span>
+        </div>
+        <p id="aiHintText" class="aiHintText"></p>
+      </div>
 
       <div class="bottomRow">
         <button id="skipBtn" class="btn">Skip</button>
+        <button id="aiHintBtn" class="btn accent">AI Hint</button>
         <button id="showBtn" class="btn danger">Show Answer</button>
         <button id="nextBtn" class="btn primary hidden">Next</button>
       </div>
@@ -175,6 +183,6 @@
     </section>
   </div>
 
-  <script src="app.js?v=20260310a"></script>
+  <script src="app.js?v=20260310b"></script>
 </body>
 </html>
