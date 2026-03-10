@@ -2,6 +2,7 @@ const POINTS_PER_QUESTION = 10;
 const AUTO_NEXT_DELAY_MS = 800;
 const AUTO_PLAY_COUNT = 2;
 const REPEAT_PAUSE_MS = 900;
+const TEXTBOOK_CONTENT_URL = "data/textbooks.json?v=20260310a";
 
 let score = 0;
 let qIndex = 0;
@@ -12,6 +13,8 @@ let answerRevealed = false;
 let speechRepeatTimerId = null;
 let currentTextbook = null;
 let activeQuestions = [];
+let textbookCollections = [];
+let textbookCollectionPromise = null;
 
 const home = document.getElementById("home");
 const library = document.getElementById("library");
@@ -32,6 +35,7 @@ const addBtn = document.getElementById("addBtn");
 const clearBtn = document.getElementById("clearBtn");
 const answerRevealEl = document.getElementById("answerReveal");
 const textbookGrid = document.getElementById("textbookGrid");
+const homeStatusEl = document.getElementById("homeStatus");
 
 const skipBtn = document.getElementById("skipBtn");
 const showBtn = document.getElementById("showBtn");
@@ -125,6 +129,21 @@ function setFeedback(message, type = "") {
   feedbackEl.textContent = message;
 }
 
+function setHomeStatus(message, type = "") {
+  homeStatusEl.className = "statusNote";
+
+  if (type === "bad") {
+    homeStatusEl.classList.add("bad");
+  }
+
+  homeStatusEl.textContent = message;
+}
+
+function setStartButtonLoading(isLoading) {
+  startBtn.disabled = isLoading;
+  startBtn.textContent = isLoading ? "Loading..." : "Launch Demo";
+}
+
 function hideAnswerReveal() {
   answerRevealed = false;
   answerRevealEl.textContent = "";
@@ -167,6 +186,68 @@ function updateSelectedTextbookCopy() {
   selectedTextbookNameEl.textContent = currentTextbook.audience;
   selectedTextbookMetaEl.textContent = `${activeQuestions.length} drills · ${currentTextbook.level}`;
   resultTextbookEl.textContent = `Textbook: ${currentTextbook.title}`;
+}
+
+function normalizeTextbookCollections(payload) {
+  const collections = Array.isArray(payload) ? payload : payload && Array.isArray(payload.textbooks) ? payload.textbooks : null;
+
+  if (!collections) {
+    throw new Error("Invalid textbook payload.");
+  }
+
+  return collections.map((textbook) => ({
+    ...textbook,
+    questions: Array.isArray(textbook.questions) ? textbook.questions : []
+  }));
+}
+
+async function loadTextbookCollections() {
+  if (textbookCollections.length > 0) {
+    return textbookCollections;
+  }
+
+  if (!textbookCollectionPromise) {
+    textbookCollectionPromise = fetch(TEXTBOOK_CONTENT_URL, { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Unable to load textbook content (${response.status}).`);
+        }
+
+        return response.json();
+      })
+      .then((payload) => {
+        textbookCollections = normalizeTextbookCollections(payload);
+        return textbookCollections;
+      })
+      .catch((error) => {
+        textbookCollectionPromise = null;
+        throw error;
+      });
+  }
+
+  return textbookCollectionPromise;
+}
+
+async function ensureTextbookContentLoaded() {
+  if (textbookCollections.length > 0) {
+    setHomeStatus(`${textbookCollections.length} textbook collections ready to demo.`);
+    return true;
+  }
+
+  setStartButtonLoading(true);
+  setHomeStatus("Loading textbook library...");
+
+  try {
+    await loadTextbookCollections();
+    setHomeStatus(`${textbookCollections.length} textbook collections ready to demo.`);
+    return true;
+  } catch (error) {
+    console.error(error);
+    setHomeStatus("Unable to load textbook content. Refresh the page or run the app from a local server.", "bad");
+    return false;
+  } finally {
+    setStartButtonLoading(false);
+  }
 }
 
 function speakSentence(sentence, repeatCount = 1) {
@@ -213,6 +294,11 @@ function speakSentence(sentence, repeatCount = 1) {
 function renderTextbookLibrary() {
   textbookGrid.innerHTML = "";
 
+  if (textbookCollections.length === 0) {
+    textbookGrid.innerHTML = '<p class="practiceSub">No textbook collections are available yet.</p>';
+    return;
+  }
+
   textbookCollections.forEach((textbook, index) => {
     const card = document.createElement("article");
     card.className = "textbookCard";
@@ -239,7 +325,13 @@ function renderTextbookLibrary() {
   });
 }
 
-function showLibrary() {
+async function showLibrary() {
+  const isLoaded = await ensureTextbookContentLoaded();
+  if (!isLoaded) {
+    showScreen(home);
+    return;
+  }
+
   clearAutoNextTimer();
   cancelSpeech();
   hideAnswerReveal();
@@ -422,6 +514,14 @@ function playCurrentSentence() {
   }
 }
 
+async function initializeApp() {
+  setQuestionLocked(true);
+  updateSelectedTextbookCopy();
+  updateTop();
+  rateVal.textContent = parseFloat(rateSlider.value).toFixed(1);
+  await ensureTextbookContentLoaded();
+}
+
 startBtn.addEventListener("click", showLibrary);
 restartBtn.addEventListener("click", showLibrary);
 libraryBackBtn.addEventListener("click", showHome);
@@ -445,7 +545,4 @@ showBtn.addEventListener("click", showAnswer);
 skipBtn.addEventListener("click", skipQuestion);
 nextBtn.addEventListener("click", nextQuestion);
 
-setQuestionLocked(true);
-updateSelectedTextbookCopy();
-updateTop();
-rateVal.textContent = parseFloat(rateSlider.value).toFixed(1);
+initializeApp();
