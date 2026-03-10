@@ -3,10 +3,13 @@ const AUTO_NEXT_DELAY_MS = 800;
 const AUTO_PLAY_COUNT = 2;
 const REPEAT_PAUSE_MS = 900;
 const TEXTBOOK_CONTENT_URL = "data/textbooks.json?v=20260310a";
-const AI_HINT_API_URL =
-  window.LingoDictationConfig && typeof window.LingoDictationConfig.aiHintUrl === "string"
-    ? window.LingoDictationConfig.aiHintUrl
-    : "";
+const AI_CHAT_API_URL =
+  window.LingoDictationConfig &&
+  (typeof window.LingoDictationConfig.aiChatUrl === "string"
+    ? window.LingoDictationConfig.aiChatUrl
+    : typeof window.LingoDictationConfig.aiHintUrl === "string"
+      ? window.LingoDictationConfig.aiHintUrl
+      : "");
 
 let score = 0;
 let qIndex = 0;
@@ -19,9 +22,9 @@ let currentTextbook = null;
 let activeQuestions = [];
 let textbookCollections = [];
 let textbookCollectionPromise = null;
-let aiHintLoading = false;
-let aiHintRequestId = 0;
-const aiHintCache = new Map();
+let aiChatLoading = false;
+let aiChatRequestId = 0;
+let aiChatMessages = [];
 
 const home = document.getElementById("home");
 const library = document.getElementById("library");
@@ -43,10 +46,10 @@ const clearBtn = document.getElementById("clearBtn");
 const answerRevealEl = document.getElementById("answerReveal");
 const textbookGrid = document.getElementById("textbookGrid");
 const homeStatusEl = document.getElementById("homeStatus");
-const aiHintBtn = document.getElementById("aiHintBtn");
-const aiHintPanel = document.getElementById("aiHintPanel");
-const aiHintTextEl = document.getElementById("aiHintText");
-const aiHintMetaEl = document.getElementById("aiHintMeta");
+const aiChatMessagesEl = document.getElementById("aiChatMessages");
+const aiChatInput = document.getElementById("aiChatInput");
+const aiChatSendBtn = document.getElementById("aiChatSendBtn");
+const aiCoachMetaEl = document.getElementById("aiCoachMeta");
 
 const skipBtn = document.getElementById("skipBtn");
 const showBtn = document.getElementById("showBtn");
@@ -124,7 +127,7 @@ function setQuestionLocked(locked) {
   wordInput.disabled = locked;
   addBtn.disabled = locked;
   clearBtn.disabled = locked;
-  updateAiHintButtonState();
+  updateAiChatComposerState();
 }
 
 function setFeedback(message, type = "") {
@@ -156,9 +159,10 @@ function setStartButtonLoading(isLoading) {
   startBtn.textContent = isLoading ? "Loading..." : "Launch Demo";
 }
 
-function updateAiHintButtonState() {
-  aiHintBtn.disabled = questionLocked || aiHintLoading;
-  aiHintBtn.textContent = aiHintLoading ? "Thinking..." : "AI Hint";
+function updateAiChatComposerState() {
+  aiChatInput.disabled = questionLocked || aiChatLoading;
+  aiChatSendBtn.disabled = questionLocked || aiChatLoading;
+  aiChatSendBtn.textContent = aiChatLoading ? "Sending..." : "Send";
 }
 
 function hideAnswerReveal() {
@@ -173,27 +177,56 @@ function showAnswerReveal(sentence) {
   answerRevealEl.classList.remove("hidden");
 }
 
-function hideAiHint() {
-  aiHintPanel.classList.add("hidden");
-  aiHintTextEl.textContent = "";
-  aiHintMetaEl.textContent = "Guided support";
+function renderAiChatMessages() {
+  aiChatMessagesEl.innerHTML = "";
+
+  aiChatMessages.forEach((message) => {
+    const bubble = document.createElement("div");
+    bubble.className = `aiChatMessage ${message.role}`;
+
+    const text = document.createElement("p");
+    text.className = "aiChatMessageText";
+    text.textContent = message.text;
+    bubble.appendChild(text);
+
+    if (message.meta) {
+      const meta = document.createElement("span");
+      meta.className = "aiChatMessageMeta";
+      meta.textContent = message.meta;
+      bubble.appendChild(meta);
+    }
+
+    aiChatMessagesEl.appendChild(bubble);
+  });
+
+  aiChatMessagesEl.scrollTop = aiChatMessagesEl.scrollHeight;
 }
 
-function showAiHint(text, meta = "Guided support") {
-  aiHintTextEl.textContent = text;
-  aiHintMetaEl.textContent = meta;
-  aiHintPanel.classList.remove("hidden");
+function pushAiChatMessage(role, text, meta = "") {
+  aiChatMessages.push({ role, text, meta });
+  renderAiChatMessages();
 }
 
-function setAiHintLoading(isLoading) {
-  aiHintLoading = isLoading;
-  updateAiHintButtonState();
+function getAiCoachIntro(question) {
+  if (!question) {
+    return "Ask about meaning, vocabulary, or the part of the sentence that is hard to catch.";
+  }
+
+  return "Ask about the meaning, a vocabulary word, or what part of this sentence is easy to miss.";
 }
 
-function resetAiHintState() {
-  aiHintRequestId += 1;
-  setAiHintLoading(false);
-  hideAiHint();
+function setAiChatLoading(isLoading) {
+  aiChatLoading = isLoading;
+  updateAiChatComposerState();
+}
+
+function resetAiChatState(question = getCurrentQuestion()) {
+  aiChatRequestId += 1;
+  aiChatMessages = [];
+  setAiChatLoading(false);
+  aiCoachMetaEl.textContent = "Sentence support";
+  pushAiChatMessage("assistant", getAiCoachIntro(question), "Ask AI");
+  aiChatInput.value = "";
 }
 
 function updateProgress() {
@@ -232,9 +265,17 @@ function getNormalizedWords(sentence) {
   return tokenize(sentence).map(normalizeWord).filter(Boolean);
 }
 
-function getHintCacheKey(question, answer) {
-  const textbookId = currentTextbook ? currentTextbook.id : "default";
-  return `${textbookId}:${qIndex}:${normalizeSentence(question.sentence)}:${normalizeSentence(answer)}`;
+function getQuestionSupport(question) {
+  const support = question && question.support && typeof question.support === "object" ? question.support : {};
+
+  return {
+    meaning: typeof support.meaning === "string" ? support.meaning : "This sentence is asking you to focus on the exact wording and the main idea.",
+    listeningFocus:
+      typeof support.listeningFocus === "string"
+        ? support.listeningFocus
+        : "Listen for the opening subject, the main verb, and the final phrase before you type.",
+    vocabulary: support.vocabulary && typeof support.vocabulary === "object" ? support.vocabulary : {}
+  };
 }
 
 function getFirstMismatch(targetWords, answerWords) {
@@ -296,67 +337,118 @@ function describeWordLength(word) {
   return "longer";
 }
 
-function buildLocalAiHint(question, answer) {
+function buildDifferenceReply(question, answer, support) {
   const targetWords = getNormalizedWords(question.sentence);
   const answerWords = getNormalizedWords(answer);
 
   if (!answerWords.length) {
-    return `Start with the opening phrase first. This sentence has ${targetWords.length} words, so catch the subject and verb before you worry about the ending.`;
+    return `Start with the opening phrase first. ${support.listeningFocus}`;
   }
 
   if (normalizeSentence(answer) === normalizeSentence(question.sentence)) {
-    return "Your sentence already matches the target. Click Check to submit it.";
+    return "Your current answer already matches the sentence. Click Check to submit it.";
   }
 
   if (answerWords.length + 2 < targetWords.length) {
-    return "Your answer is much shorter than the target. Replay the audio and listen for the clause near the end before you submit again.";
+    return `Your answer is much shorter than the target. ${support.listeningFocus}`;
   }
 
   if (answerWords.length > targetWords.length + 1) {
-    return "Your answer is longer than the target. Trim any extra word and match the exact sentence you hear.";
+    return `Your answer is longer than the target. Remove any extra word and match the exact sentence. ${support.listeningFocus}`;
   }
 
   const mismatch = getFirstMismatch(targetWords, answerWords);
 
   if (!mismatch) {
-    return "Listen once more for the sentence rhythm and punctuation, then submit the exact wording you hear.";
+    return `The difference is small, so listen again for the exact rhythm and wording. ${support.listeningFocus}`;
   }
 
   const slot = describeHintSlot(targetWords, mismatch.index);
 
   if (mismatch.type === "extra") {
-    return `There is an extra word near ${slot}. Replay the audio and keep only the exact words you hear.`;
+    return `There is an extra word near ${slot}. Replay the audio and keep only the words you hear.`;
   }
 
   const clueWord = mismatch.targetWord;
   const clueStarter = clueWord.charAt(0).toUpperCase();
   const clueLength = describeWordLength(clueWord);
 
-  if (answerRevealed) {
-    return `Compare ${slot}. The correct word is a ${clueLength} word that starts with "${clueStarter}".`;
-  }
-
   if (mismatch.type === "missing") {
-    return `You are close. A ${clueLength} word is missing at ${slot}, and it starts with "${clueStarter}".`;
+    return `A ${clueLength} word is missing at ${slot}, and it starts with "${clueStarter}". ${support.listeningFocus}`;
   }
 
-  return `Focus on ${slot}. It should be a ${clueLength} word that starts with "${clueStarter}", so revise that part instead of changing the whole sentence.`;
+  return `The tricky part is ${slot}. The correct word there is a ${clueLength} word that starts with "${clueStarter}". ${support.listeningFocus}`;
 }
 
-async function requestRemoteAiHint(question, answer) {
-  if (!AI_HINT_API_URL) {
+function extractReferencedWord(prompt, question, support) {
+  const normalizedPrompt = normalizeSentence(prompt);
+  const vocabularyWords = Object.keys(support.vocabulary);
+  const sentenceWords = getNormalizedWords(question.sentence).filter((word) => word.length > 3);
+  const candidates = [...new Set([...vocabularyWords, ...sentenceWords])].sort((left, right) => right.length - left.length);
+
+  return candidates.find((candidate) => normalizedPrompt.includes(candidate)) || "";
+}
+
+function buildLocalAiChatReply(question, prompt, answer) {
+  const support = getQuestionSupport(question);
+  const promptText = prompt.trim();
+  const lowerPrompt = promptText.toLowerCase();
+  const referencedWord = extractReferencedWord(promptText, question, support);
+
+  if (!promptText) {
+    return "Ask about the meaning, a vocabulary word, or what part of the sentence was difficult to hear.";
+  }
+
+  if (/(mistake|wrong|difference|missed|why|check my answer)/i.test(lowerPrompt)) {
+    return buildDifferenceReply(question, answer, support);
+  }
+
+  if (/(mean|meaning|translate|what is this sentence about|什么意思)/i.test(lowerPrompt)) {
+    return `${support.meaning} ${support.listeningFocus}`;
+  }
+
+  if (referencedWord && support.vocabulary[referencedWord]) {
+    return `"${referencedWord}" means ${support.vocabulary[referencedWord]}. ${support.listeningFocus}`;
+  }
+
+  if (/(vocabulary|word|phrase|what does)/i.test(lowerPrompt)) {
+    const firstEntry = Object.entries(support.vocabulary)[0];
+
+    if (firstEntry) {
+      return `A key word here is "${firstEntry[0]}". It means ${firstEntry[1]}.`;
+    }
+  }
+
+  if (/(listen|hear|catch|sound|spell|hard|difficult|part)/i.test(lowerPrompt)) {
+    return support.listeningFocus;
+  }
+
+  if (answer.trim()) {
+    return `${support.meaning} If you want, you can also ask why your current answer is different from the target sentence.`;
+  }
+
+  return `${support.meaning} ${support.listeningFocus}`;
+}
+
+async function requestRemoteAiChat(question, prompt, answer) {
+  if (!AI_CHAT_API_URL) {
     return null;
   }
 
-  const response = await fetch(AI_HINT_API_URL, {
+  const response = await fetch(AI_CHAT_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
       sentence: question.sentence,
+      prompt,
       answer,
       questionIndex: qIndex,
+      history: aiChatMessages.map((message) => ({
+        role: message.role,
+        text: message.text
+      })),
       textbook: currentTextbook
         ? {
             id: currentTextbook.id,
@@ -369,14 +461,22 @@ async function requestRemoteAiHint(question, answer) {
   });
 
   if (!response.ok) {
-    throw new Error(`AI hint request failed (${response.status}).`);
+    throw new Error(`AI chat request failed (${response.status}).`);
   }
 
   const payload = await response.json();
-  return payload && typeof payload.hint === "string" ? payload.hint.trim() : null;
+  if (payload && typeof payload.reply === "string") {
+    return payload.reply.trim();
+  }
+
+  if (payload && typeof payload.message === "string") {
+    return payload.message.trim();
+  }
+
+  return null;
 }
 
-async function requestAiHint() {
+async function sendAiChatMessage() {
   if (questionLocked) {
     return;
   }
@@ -386,36 +486,31 @@ async function requestAiHint() {
     return;
   }
 
+  const prompt = aiChatInput.value.trim();
   const answer = wordInput.value.trim();
 
-  if (normalizeSentence(answer) === normalizeSentence(question.sentence) && answer) {
-    showAiHint("Your sentence already matches the target. Click Check to submit it.", "Ready to submit");
-    setFeedback("Your answer looks correct. Submit it when ready.");
+  if (!prompt) {
+    aiChatInput.focus();
     return;
   }
 
-  const cacheKey = getHintCacheKey(question, answer);
-  const cachedHint = aiHintCache.get(cacheKey);
+  pushAiChatMessage("user", prompt, "Student");
+  aiChatInput.value = "";
 
-  if (cachedHint) {
-    showAiHint(cachedHint.text, cachedHint.meta);
-    setFeedback("Use the hint, replay the sentence, and revise your answer.");
-    return;
-  }
-
-  aiHintRequestId += 1;
-  const currentRequestId = aiHintRequestId;
-  setAiHintLoading(true);
-  setFeedback(answer ? "Generating a targeted hint for this attempt..." : "Generating a first-pass hint...");
+  aiChatRequestId += 1;
+  const currentRequestId = aiChatRequestId;
+  setAiChatLoading(true);
+  aiCoachMetaEl.textContent = "Conversation";
+  setFeedback("AI is preparing a sentence-specific response...");
 
   try {
-    let hint = null;
-    let meta = "AI-ready demo";
+    let reply = null;
+    let meta = "Local support";
 
-    if (AI_HINT_API_URL) {
+    if (AI_CHAT_API_URL) {
       try {
-        hint = await requestRemoteAiHint(question, answer);
-        if (hint) {
+        reply = await requestRemoteAiChat(question, prompt, answer);
+        if (reply) {
           meta = "AI coach";
         }
       } catch (error) {
@@ -423,21 +518,20 @@ async function requestAiHint() {
       }
     }
 
-    if (!hint) {
-      hint = buildLocalAiHint(question, answer);
+    if (!reply) {
+      reply = buildLocalAiChatReply(question, prompt, answer);
     }
 
-    if (currentRequestId !== aiHintRequestId) {
+    if (currentRequestId !== aiChatRequestId) {
       return;
     }
 
-    const hintPayload = { text: hint, meta };
-    aiHintCache.set(cacheKey, hintPayload);
-    showAiHint(hintPayload.text, hintPayload.meta);
-    setFeedback("Use the hint, replay the sentence, and revise your answer.");
+    pushAiChatMessage("assistant", reply, meta);
+    setFeedback("You can keep asking follow-up questions about this sentence.");
   } finally {
-    if (currentRequestId === aiHintRequestId) {
-      setAiHintLoading(false);
+    if (currentRequestId === aiChatRequestId) {
+      setAiChatLoading(false);
+      aiChatInput.focus();
     }
   }
 }
@@ -589,7 +683,7 @@ async function showLibrary() {
   clearAutoNextTimer();
   cancelSpeech();
   hideAnswerReveal();
-  resetAiHintState();
+  resetAiChatState(null);
   setQuestionLocked(true);
   renderTextbookLibrary();
   showScreen(library);
@@ -606,7 +700,7 @@ function loadQuestion() {
   }
 
   hideAnswerReveal();
-  resetAiHintState();
+  resetAiChatState(question);
   nextBtn.classList.add("hidden");
   setQuestionLocked(false);
   setFeedback("Audio starts automatically. Type the full sentence when ready.");
@@ -631,7 +725,6 @@ function startTextbook(textbookId) {
   activeQuestions = textbook.questions;
   score = 0;
   qIndex = 0;
-  aiHintCache.clear();
 
   updateSelectedTextbookCopy();
   showScreen(practice);
@@ -647,7 +740,7 @@ function startTextbook(textbookId) {
 function markCorrect() {
   score += POINTS_PER_QUESTION;
   updateTop();
-  resetAiHintState();
+  resetAiChatState(null);
   setFeedback("Correct. Loading the next sentence...", "good");
   setQuestionLocked(true);
   nextBtn.classList.add("hidden");
@@ -693,7 +786,6 @@ function clearInput() {
 
   wordInput.value = "";
   hideAnswerReveal();
-  resetAiHintState();
   nextBtn.classList.add("hidden");
   setFeedback("Cleared. Audio starts automatically on each new sentence.");
   wordInput.focus();
@@ -738,7 +830,7 @@ function finish() {
   cancelSpeech();
   setQuestionLocked(true);
   hideAnswerReveal();
-  resetAiHintState();
+  resetAiChatState(null);
   progressFill.style.width = "100%";
   updateSelectedTextbookCopy();
 
@@ -762,7 +854,7 @@ function showHome() {
   clearAutoNextTimer();
   cancelSpeech();
   hideAnswerReveal();
-  resetAiHintState();
+  resetAiChatState(null);
   setQuestionLocked(true);
   showScreen(home);
 }
@@ -777,7 +869,7 @@ function playCurrentSentence() {
 
 async function initializeApp() {
   setQuestionLocked(true);
-  hideAiHint();
+  resetAiChatState(null);
   updateSelectedTextbookCopy();
   updateTop();
   rateVal.textContent = parseFloat(rateSlider.value).toFixed(1);
@@ -801,9 +893,14 @@ wordInput.addEventListener("keydown", (event) => {
     checkAnswer();
   }
 });
+aiChatInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    sendAiChatMessage();
+  }
+});
 
 clearBtn.addEventListener("click", clearInput);
-aiHintBtn.addEventListener("click", requestAiHint);
+aiChatSendBtn.addEventListener("click", sendAiChatMessage);
 showBtn.addEventListener("click", showAnswer);
 skipBtn.addEventListener("click", skipQuestion);
 nextBtn.addEventListener("click", nextQuestion);

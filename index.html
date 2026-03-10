@@ -8,7 +8,7 @@
     name="description"
     content="LingoDictation is a polished browser demo for English listening practice, built for student pilots, tutoring sessions, and future iPad delivery."
   />
-  <link rel="stylesheet" href="style.css?v=20260310b" />
+  <link rel="stylesheet" href="style.css?v=20260310c" />
 </head>
 <body>
   <div class="container">
@@ -146,17 +146,23 @@
 
       <div id="answerReveal" class="answerReveal hidden"></div>
       <div id="feedback" class="feedback"></div>
-      <div id="aiHintPanel" class="aiHintCard hidden">
-        <div class="aiHintHeader">
-          <span class="aiHintBadge">AI Hint</span>
-          <span id="aiHintMeta" class="aiHintMeta">Guided support</span>
+      <div class="aiCoachCard">
+        <div class="aiCoachHeader">
+          <div>
+            <span class="aiCoachBadge">Ask AI</span>
+            <p class="aiCoachIntro">Students can ask about meaning, vocabulary, or what they missed in the sentence.</p>
+          </div>
+          <span id="aiCoachMeta" class="aiCoachMeta">Sentence support</span>
         </div>
-        <p id="aiHintText" class="aiHintText"></p>
+        <div id="aiChatMessages" class="aiChatMessages"></div>
+        <div class="aiChatComposer">
+          <input id="aiChatInput" class="input aiChatInput" placeholder="Ask about this sentence..." autocomplete="off" />
+          <button id="aiChatSendBtn" class="btn accent" type="button">Send</button>
+        </div>
       </div>
 
       <div class="bottomRow">
         <button id="skipBtn" class="btn">Skip</button>
-        <button id="aiHintBtn" class="btn accent">AI Hint</button>
         <button id="showBtn" class="btn danger">Show Answer</button>
         <button id="nextBtn" class="btn primary hidden">Next</button>
       </div>
@@ -183,6 +189,6 @@
     </section>
   </div>
 
-  <script src="app.js?v=20260310b"></script>
+  <script src="app.js?v=20260310c"></script>
 </body>
 </html>

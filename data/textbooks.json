@@ -9,13 +9,37 @@
       "description": "Short, clear classroom sentences for first-pass dictation and confidence building.",
       "questions": [
         {
-          "sentence": "Students should review their notes before exams."
+          "sentence": "Students should review their notes before exams.",
+          "support": {
+            "meaning": "This sentence says students need to study their notes before a test.",
+            "listeningFocus": "Listen for the verb phrase \"review their notes\" and the final time phrase \"before exams\".",
+            "vocabulary": {
+              "review": "to study something again",
+              "exams": "tests that check what students have learned"
+            }
+          }
         },
         {
-          "sentence": "The teacher asked everyone to underline the main idea."
+          "sentence": "The teacher asked everyone to underline the main idea.",
+          "support": {
+            "meaning": "The teacher told the class to mark the most important point in the text.",
+            "listeningFocus": "Catch the action chain \"asked everyone to underline\" and the final phrase \"the main idea\".",
+            "vocabulary": {
+              "underline": "to draw a line under a word or sentence",
+              "main idea": "the most important point"
+            }
+          }
         },
         {
-          "sentence": "Our class worked together to finish the science poster."
+          "sentence": "Our class worked together to finish the science poster.",
+          "support": {
+            "meaning": "The class cooperated to complete a poster for science.",
+            "listeningFocus": "Listen for the teamwork phrase \"worked together\" and the object at the end, \"science poster\".",
+            "vocabulary": {
+              "worked together": "cooperated as a group",
+              "poster": "a large sheet used to present information"
+            }
+          }
         }
       ]
     },
@@ -27,16 +51,48 @@
       "description": "Academic sentences that train connectors, cause and effect, and higher-accuracy listening.",
       "questions": [
         {
-          "sentence": "Although he was tired, he finished the assignment."
+          "sentence": "Although he was tired, he finished the assignment.",
+          "support": {
+            "meaning": "Even though he felt tired, he still completed the work.",
+            "listeningFocus": "Listen for the contrast opener \"Although\" and the ending noun \"assignment\".",
+            "vocabulary": {
+              "although": "even though",
+              "assignment": "schoolwork that must be completed"
+            }
+          }
         },
         {
-          "sentence": "Researchers often compare multiple sources before drawing a conclusion."
+          "sentence": "Researchers often compare multiple sources before drawing a conclusion.",
+          "support": {
+            "meaning": "Researchers usually look at several sources before deciding what they think.",
+            "listeningFocus": "Focus on the academic verbs \"compare\" and \"drawing a conclusion\".",
+            "vocabulary": {
+              "sources": "places where information comes from",
+              "conclusion": "a final decision or judgment"
+            }
+          }
         },
         {
-          "sentence": "In contrast, the second experiment produced more reliable results."
+          "sentence": "In contrast, the second experiment produced more reliable results.",
+          "support": {
+            "meaning": "This sentence shows a difference: the second experiment gave better and more dependable results.",
+            "listeningFocus": "Catch the contrast signal \"In contrast\" and the adjective phrase \"more reliable results\".",
+            "vocabulary": {
+              "in contrast": "showing a difference from something else",
+              "reliable": "dependable and trustworthy"
+            }
+          }
         },
         {
-          "sentence": "As a result, the new policy improved student participation in class."
+          "sentence": "As a result, the new policy improved student participation in class.",
+          "support": {
+            "meaning": "Because of that change, the new policy made students join in more during class.",
+            "listeningFocus": "Listen for the cause-and-effect starter \"As a result\" and the phrase \"student participation\".",
+            "vocabulary": {
+              "policy": "an official rule or plan",
+              "participation": "taking part in an activity"
+            }
+          }
         }
       ]
     },
@@ -48,16 +104,48 @@
       "description": "Longer response-style prompts for debate, reading follow-up, and presentation practice.",
       "questions": [
         {
-          "sentence": "During the debate, each student supported an opinion with clear evidence."
+          "sentence": "During the debate, each student supported an opinion with clear evidence.",
+          "support": {
+            "meaning": "In the debate, every student gave evidence to support an opinion.",
+            "listeningFocus": "Listen for the setting phrase \"During the debate\" and the academic phrase \"clear evidence\".",
+            "vocabulary": {
+              "debate": "a formal discussion with different opinions",
+              "evidence": "facts or examples that support an idea"
+            }
+          }
         },
         {
-          "sentence": "After reading the article, the class discussed two possible solutions."
+          "sentence": "After reading the article, the class discussed two possible solutions.",
+          "support": {
+            "meaning": "Once the class finished the article, they talked about two ways to solve the problem.",
+            "listeningFocus": "Catch the time phrase \"After reading the article\" and the ending phrase \"two possible solutions\".",
+            "vocabulary": {
+              "article": "a piece of writing",
+              "solutions": "ways to solve a problem"
+            }
+          }
         },
         {
-          "sentence": "The speaker explained the chart before answering questions from the audience."
+          "sentence": "The speaker explained the chart before answering questions from the audience.",
+          "support": {
+                        "meaning": "The presenter described the chart first and then answered people's questions.",
+            "listeningFocus": "Listen for the sequence words \"before answering\" and the final noun \"audience\".",
+            "vocabulary": {
+              "speaker": "the person giving the talk",
+              "audience": "the people listening and watching"
+            }
+          }
         },
         {
-          "sentence": "By the end of the lesson, students could summarize the passage in their own words."
+          "sentence": "By the end of the lesson, students could summarize the passage in their own words.",
+          "support": {
+            "meaning": "At the end of the lesson, students were able to explain the passage using their own language.",
+            "listeningFocus": "Focus on the time opener \"By the end of the lesson\" and the verb phrase \"summarize the passage\".",
+            "vocabulary": {
+              "summarize": "to give the main points briefly",
+              "passage": "a section of written text"
+            }
+          }
         }
       ]
     }
