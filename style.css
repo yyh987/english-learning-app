@@ -706,6 +706,76 @@ h3{
   color:var(--bad);
 }
 
+.historyCard{
+  margin:0 0 18px;
+  padding:18px 20px 20px;
+  border-radius:24px;
+  background:linear-gradient(180deg, rgba(215, 152, 60, 0.08), rgba(255, 255, 255, 0.78));
+  border:1px solid rgba(215, 152, 60, 0.22);
+}
+
+.historyHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.historyBadge,
+.historyMeta{
+  display:inline-flex;
+  align-items:center;
+  min-height:32px;
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.historyBadge{
+  background:rgba(215, 152, 60, 0.16);
+  color:#8a570c;
+}
+
+.historyMeta{
+  background:rgba(255, 255, 255, 0.7);
+  color:var(--muted);
+}
+
+.historyList{
+  display:grid;
+  gap:10px;
+  margin:16px 0 0;
+  padding:0;
+  list-style:none;
+}
+
+.historyItem{
+  display:grid;
+  gap:6px;
+  padding:12px 14px;
+  border-radius:18px;
+  background:rgba(255, 255, 255, 0.76);
+  border:1px solid rgba(23, 32, 51, 0.08);
+}
+
+.historyAttempt{
+  color:var(--accent);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.historyAnswer{
+  color:var(--ink);
+  line-height:1.55;
+  word-break:break-word;
+}
+
 .aiCoachCard{
   margin:0 0 18px;
   padding:18px 20px 20px;

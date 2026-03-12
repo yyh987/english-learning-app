@@ -2,8 +2,9 @@ const POINTS_PER_QUESTION = 10;
 const AUTO_NEXT_DELAY_MS = 800;
 const AUTO_PLAY_COUNT = 2;
 const REPEAT_PAUSE_MS = 900;
-const TEXTBOOK_CONTENT_URL = "data/textbooks.json?v=20260312a";
-const STUDENT_ROSTER_URL = "data/students.json?v=20260312a";
+const MAX_WRONG_HISTORY = 5;
+const TEXTBOOK_CONTENT_URL = "data/textbooks.json?v=20260312b";
+const STUDENT_ROSTER_URL = "data/students.json?v=20260312b";
 const AUTH_SESSION_KEY = "lingodictation-student-id";
 const AI_CHAT_API_URL =
   window.LingoDictationConfig &&
@@ -30,6 +31,8 @@ let authenticatedStudent = null;
 let aiChatLoading = false;
 let aiChatRequestId = 0;
 let aiChatMessages = [];
+let wrongAnswerHistory = [];
+let wrongAnswerAttemptCount = 0;
 
 const login = document.getElementById("login");
 const home = document.getElementById("home");
@@ -73,6 +76,8 @@ const nextBtn = document.getElementById("nextBtn");
 
 const scoreEl = document.getElementById("score");
 const feedbackEl = document.getElementById("feedback");
+const wrongHistoryCardEl = document.getElementById("wrongHistoryCard");
+const wrongHistoryListEl = document.getElementById("wrongHistoryList");
 const qIndexEl = document.getElementById("qIndex");
 const qTotalEl = document.getElementById("qTotal");
 const progressFill = document.getElementById("progress-fill");
@@ -185,6 +190,38 @@ function updateSessionBar() {
   sessionBar.classList.remove("hidden");
 }
 
+function getStudentTextbookIds(student = authenticatedStudent) {
+  return student && Array.isArray(student.textbookIds) ? student.textbookIds : [];
+}
+
+function getAvailableTextbooks(student = authenticatedStudent) {
+  const assignedTextbookIds = getStudentTextbookIds(student);
+
+  if (assignedTextbookIds.length === 0) {
+    return [];
+  }
+
+  const allowedIds = new Set(assignedTextbookIds);
+  return textbookCollections.filter((textbook) => allowedIds.has(textbook.id));
+}
+
+function getAssignedTextbookSummary(student) {
+  const assignedIds = getStudentTextbookIds(student);
+
+  if (assignedIds.length === 0) {
+    return "No textbooks assigned";
+  }
+
+  if (textbookCollections.length === 0) {
+    return `${assignedIds.length} textbooks assigned`;
+  }
+
+  const textbookMap = new Map(textbookCollections.map((textbook) => [textbook.id, textbook.title]));
+  const titles = assignedIds.map((textbookId) => textbookMap.get(textbookId)).filter(Boolean);
+
+  return titles.length > 0 ? titles.join(" · ") : `${assignedIds.length} textbooks assigned`;
+}
+
 function clearPracticeState() {
   clearAutoNextTimer();
   cancelSpeech();
@@ -194,6 +231,7 @@ function clearPracticeState() {
   qIndex = 0;
   wordInput.value = "";
   hideAnswerReveal();
+  resetWrongAnswerHistory();
   resetAiChatState(null);
   setQuestionLocked(true);
   setFeedback("");
@@ -260,6 +298,53 @@ function showAnswerReveal(sentence) {
   answerRevealed = true;
   answerRevealEl.textContent = `Answer: ${sentence}`;
   answerRevealEl.classList.remove("hidden");
+}
+
+function renderWrongAnswerHistory() {
+  wrongHistoryListEl.innerHTML = "";
+
+  if (wrongAnswerHistory.length === 0) {
+    wrongHistoryCardEl.classList.add("hidden");
+    return;
+  }
+
+  wrongAnswerHistory.forEach((entry) => {
+    const item = document.createElement("li");
+    item.className = "historyItem";
+
+    const attempt = document.createElement("span");
+    attempt.className = "historyAttempt";
+    attempt.textContent = `Try ${entry.attempt}`;
+
+    const answer = document.createElement("span");
+    answer.className = "historyAnswer";
+    answer.textContent = entry.answer;
+
+    item.append(attempt, answer);
+    wrongHistoryListEl.appendChild(item);
+  });
+
+  wrongHistoryCardEl.classList.remove("hidden");
+}
+
+function resetWrongAnswerHistory() {
+  wrongAnswerHistory = [];
+  wrongAnswerAttemptCount = 0;
+  renderWrongAnswerHistory();
+}
+
+function recordWrongAnswer(answer) {
+  wrongAnswerAttemptCount += 1;
+  wrongAnswerHistory.push({
+    attempt: wrongAnswerAttemptCount,
+    answer
+  });
+
+  if (wrongAnswerHistory.length > MAX_WRONG_HISTORY) {
+    wrongAnswerHistory = wrongAnswerHistory.slice(-MAX_WRONG_HISTORY);
+  }
+
+  renderWrongAnswerHistory();
 }
 
 function renderAiChatMessages() {
@@ -365,11 +450,13 @@ function renderDemoAccessCards() {
   studentDirectory.forEach((student) => {
     const card = document.createElement("article");
     card.className = "demoAccessCard";
+    const textbookSummary = getAssignedTextbookSummary(student);
     card.innerHTML = `
       <strong>${student.name}</strong>
       <span>${student.className}</span>
       <span>ID: ${student.id}</span>
       <span>Code: ${student.password}</span>
+      <span>${textbookSummary}</span>
     `;
     demoAccessGrid.appendChild(card);
   });
@@ -434,6 +521,8 @@ function saveStudentSession(student) {
   authenticatedStudent = student;
   sessionStorage.setItem(AUTH_SESSION_KEY, student.id);
   updateSessionBar();
+  const availableCount = getStudentTextbookIds(student).length;
+  setHomeStatus(`${availableCount} textbooks assigned to ${student.name}.`);
 }
 
 function restoreStudentSession() {
@@ -450,6 +539,7 @@ function restoreStudentSession() {
 
   authenticatedStudent = student;
   updateSessionBar();
+  setHomeStatus(`${getStudentTextbookIds(student).length} textbooks assigned to ${student.name}.`);
   return true;
 }
 
@@ -877,13 +967,24 @@ function speakSentence(sentence, repeatCount = 1) {
 
 function renderTextbookLibrary() {
   textbookGrid.innerHTML = "";
+  const availableTextbooks = getAvailableTextbooks();
 
   if (textbookCollections.length === 0) {
     textbookGrid.innerHTML = '<p class="practiceSub">No textbook collections are available yet.</p>';
     return;
   }
 
-  textbookCollections.forEach((textbook, index) => {
+  if (!authenticatedStudent) {
+    textbookGrid.innerHTML = '<p class="practiceSub">Sign in with a student account to view the textbook library.</p>';
+    return;
+  }
+
+  if (availableTextbooks.length === 0) {
+    textbookGrid.innerHTML = '<p class="practiceSub">No textbooks are assigned to this student yet. Ask your teacher to assign a collection.</p>';
+    return;
+  }
+
+  availableTextbooks.forEach((textbook, index) => {
     const card = document.createElement("article");
     card.className = "textbookCard";
 
@@ -941,6 +1042,7 @@ function loadQuestion() {
   }
 
   hideAnswerReveal();
+  resetWrongAnswerHistory();
   resetAiChatState(question);
   nextBtn.classList.add("hidden");
   setQuestionLocked(false);
@@ -959,8 +1061,9 @@ function startTextbook(textbookId) {
     return;
   }
 
-  const textbook = textbookCollections.find((item) => item.id === textbookId);
+  const textbook = getAvailableTextbooks().find((item) => item.id === textbookId);
   if (!textbook) {
+    setHomeStatus("This student does not have access to that textbook.", "bad");
     return;
   }
 
@@ -1014,6 +1117,8 @@ function checkAnswer() {
     markCorrect();
     return;
   }
+
+  recordWrongAnswer(answer);
 
   if (answerRevealed) {
     setFeedback("Not quite. Compare your input with the answer below and try again.", "bad");
