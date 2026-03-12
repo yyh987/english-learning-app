@@ -33,6 +33,7 @@ let aiChatRequestId = 0;
 let aiChatMessages = [];
 let wrongAnswerHistory = [];
 let wrongAnswerAttemptCount = 0;
+let preferredSpeechVoice = null;
 
 const login = document.getElementById("login");
 const home = document.getElementById("home");
@@ -113,6 +114,59 @@ function cancelSpeech() {
   if ("speechSynthesis" in window) {
     window.speechSynthesis.cancel();
   }
+}
+
+function scoreSpeechVoice(voice) {
+  const name = `${voice.name || ""} ${voice.voiceURI || ""}`.toLowerCase();
+  let score = 0;
+
+  if (/^en/i.test(voice.lang || "")) {
+    score += 40;
+  }
+
+  if (voice.localService) {
+    score += 6;
+  }
+
+  if (/natural|premium|enhanced|neural/i.test(name)) {
+    score += 40;
+  }
+
+  if (/microsoft aria|microsoft jenny|microsoft guy|microsoft libby/i.test(name)) {
+    score += 38;
+  }
+
+  if (/samantha|alex|ava|allison|serena|moira|daniel|karen/i.test(name)) {
+    score += 32;
+  }
+
+  if (/google us english|google uk english|google english/i.test(name)) {
+    score += 26;
+  }
+
+  if (/zira|hazel|fred/i.test(name)) {
+    score -= 6;
+  }
+
+  return score;
+}
+
+function refreshPreferredSpeechVoice() {
+  if (!("speechSynthesis" in window)) {
+    preferredSpeechVoice = null;
+    return null;
+  }
+
+  const voices = window.speechSynthesis.getVoices();
+  const englishVoices = voices.filter((voice) => /^en/i.test(voice.lang || ""));
+
+  if (englishVoices.length === 0) {
+    preferredSpeechVoice = null;
+    return null;
+  }
+
+  preferredSpeechVoice = englishVoices.sort((left, right) => scoreSpeechVoice(right) - scoreSpeechVoice(left))[0] || null;
+  return preferredSpeechVoice;
 }
 
 function tokenize(sentence) {
@@ -931,6 +985,7 @@ function speakSentence(sentence, repeatCount = 1) {
   }
 
   cancelSpeech();
+  const selectedVoice = preferredSpeechVoice || refreshPreferredSpeechVoice();
   const currentRunId = speechRunId;
 
   function speakRemaining(remaining) {
@@ -940,7 +995,10 @@ function speakSentence(sentence, repeatCount = 1) {
 
     const utterance = new SpeechSynthesisUtterance(sentence);
     utterance.rate = parseFloat(rateSlider.value);
-    utterance.lang = "en-US";
+    utterance.lang = selectedVoice ? selectedVoice.lang : "en-US";
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
     utterance.onend = () => {
       if (currentRunId !== speechRunId) {
         return;
@@ -1230,6 +1288,11 @@ async function initializeApp() {
   updateTop();
   rateVal.textContent = parseFloat(rateSlider.value).toFixed(1);
   updateSessionBar();
+  refreshPreferredSpeechVoice();
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.addEventListener("voiceschanged", refreshPreferredSpeechVoice);
+  }
 
   await Promise.all([ensureTextbookContentLoaded(), ensureStudentDirectoryLoaded()]);
 
