@@ -8,11 +8,61 @@
     name="description"
     content="LingoDictation is a polished browser demo for English listening practice, built for student pilots, tutoring sessions, and future iPad delivery."
   />
-  <link rel="stylesheet" href="style.css?v=20260310c" />
+  <link rel="stylesheet" href="style.css?v=20260312a" />
 </head>
 <body>
   <div class="container">
-    <section id="home" class="card heroCard">
+    <div id="sessionBar" class="sessionBar hidden">
+      <div class="sessionIdentity">
+        <span class="sessionLabel">Signed in</span>
+        <span id="sessionName" class="sessionName">Student Name</span>
+        <span id="sessionMeta" class="sessionMeta">Grade · School</span>
+      </div>
+      <button id="logoutBtn" class="btn secondary sessionLogoutBtn" type="button">Log Out</button>
+    </div>
+
+    <section id="login" class="card loginCard">
+      <div class="loginGrid">
+        <div class="loginCopy">
+          <span class="eyebrow">Student Sign-In</span>
+          <h1>Verify student identity before practice begins.</h1>
+          <p class="sub">
+            Students sign in with a school ID and access code before they can enter the listening library.
+            This keeps the practice flow student-specific and prepares the product for school pilots.
+          </p>
+          <p id="loginStatus" class="statusNote">Loading student access...</p>
+
+          <div>
+            <span class="featureKicker">Demo access</span>
+            <div id="demoAccessGrid" class="demoAccessGrid"></div>
+          </div>
+        </div>
+
+        <div class="loginPanel">
+          <h2>Student Login</h2>
+          <p class="practiceSub">
+            Use the student ID and access code issued by your school to continue.
+          </p>
+
+          <div class="fieldStack">
+            <label class="fieldGroup" for="studentIdInput">
+              <span class="fieldLabel">Student ID</span>
+              <input id="studentIdInput" class="input" placeholder="e.g. S1001" autocomplete="username" />
+            </label>
+
+            <label class="fieldGroup" for="studentCodeInput">
+              <span class="fieldLabel">Access Code</span>
+              <input id="studentCodeInput" class="input" type="password" placeholder="Enter your code" autocomplete="current-password" />
+            </label>
+          </div>
+
+          <button id="loginBtn" class="btn primary loginBtn" type="button">Sign In</button>
+          <div id="loginFeedback" class="feedback loginFeedback"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="home" class="card heroCard hidden">
       <div class="heroGrid">
         <div class="heroCopy">
           <span class="eyebrow">LingoDictation Demo</span>
@@ -69,7 +119,7 @@
         <article class="featureCard">
           <span class="featureKicker">01</span>
           <h2>Built to share quickly</h2>
-          <p>Open it in a browser, send a clean link, and let students start without installs or logins.</p>
+          <p>Open it in a browser, sign students in with school IDs, and let them start without installing anything.</p>
         </article>
         <article class="featureCard">
           <span class="featureKicker">02</span>
@@ -189,6 +239,6 @@
     </section>
   </div>
 
-  <script src="app.js?v=20260310c"></script>
+  <script src="app.js?v=20260312a"></script>
 </body>
 </html>

@@ -2,7 +2,9 @@ const POINTS_PER_QUESTION = 10;
 const AUTO_NEXT_DELAY_MS = 800;
 const AUTO_PLAY_COUNT = 2;
 const REPEAT_PAUSE_MS = 900;
-const TEXTBOOK_CONTENT_URL = "data/textbooks.json?v=20260310a";
+const TEXTBOOK_CONTENT_URL = "data/textbooks.json?v=20260312a";
+const STUDENT_ROSTER_URL = "data/students.json?v=20260312a";
+const AUTH_SESSION_KEY = "lingodictation-student-id";
 const AI_CHAT_API_URL =
   window.LingoDictationConfig &&
   (typeof window.LingoDictationConfig.aiChatUrl === "string"
@@ -22,18 +24,24 @@ let currentTextbook = null;
 let activeQuestions = [];
 let textbookCollections = [];
 let textbookCollectionPromise = null;
+let studentDirectory = [];
+let studentDirectoryPromise = null;
+let authenticatedStudent = null;
 let aiChatLoading = false;
 let aiChatRequestId = 0;
 let aiChatMessages = [];
 
+const login = document.getElementById("login");
 const home = document.getElementById("home");
 const library = document.getElementById("library");
 const practice = document.getElementById("practice");
 const result = document.getElementById("result");
 
+const loginBtn = document.getElementById("loginBtn");
 const startBtn = document.getElementById("startBtn");
 const restartBtn = document.getElementById("restartBtn");
 const libraryBackBtn = document.getElementById("libraryBackBtn");
+const logoutBtn = document.getElementById("logoutBtn");
 
 const playBtn = document.getElementById("playBtn");
 const repeatBtn = document.getElementById("repeatBtn");
@@ -46,10 +54,18 @@ const clearBtn = document.getElementById("clearBtn");
 const answerRevealEl = document.getElementById("answerReveal");
 const textbookGrid = document.getElementById("textbookGrid");
 const homeStatusEl = document.getElementById("homeStatus");
+const loginStatusEl = document.getElementById("loginStatus");
+const loginFeedbackEl = document.getElementById("loginFeedback");
+const studentIdInput = document.getElementById("studentIdInput");
+const studentCodeInput = document.getElementById("studentCodeInput");
+const demoAccessGrid = document.getElementById("demoAccessGrid");
 const aiChatMessagesEl = document.getElementById("aiChatMessages");
 const aiChatInput = document.getElementById("aiChatInput");
 const aiChatSendBtn = document.getElementById("aiChatSendBtn");
 const aiCoachMetaEl = document.getElementById("aiCoachMeta");
+const sessionBar = document.getElementById("sessionBar");
+const sessionNameEl = document.getElementById("sessionName");
+const sessionMetaEl = document.getElementById("sessionMeta");
 
 const skipBtn = document.getElementById("skipBtn");
 const showBtn = document.getElementById("showBtn");
@@ -115,11 +131,80 @@ function getCurrentQuestion() {
 }
 
 function showScreen(screen) {
+  login.classList.add("hidden");
   home.classList.add("hidden");
   library.classList.add("hidden");
   practice.classList.add("hidden");
   result.classList.add("hidden");
   screen.classList.remove("hidden");
+}
+
+function normalizeStudentId(studentId) {
+  return studentId.trim().toUpperCase();
+}
+
+function setLoginFeedback(message, type = "") {
+  loginFeedbackEl.className = "feedback loginFeedback";
+
+  if (type === "good") {
+    loginFeedbackEl.classList.add("good");
+  }
+
+  if (type === "bad") {
+    loginFeedbackEl.classList.add("bad");
+  }
+
+  loginFeedbackEl.textContent = message;
+}
+
+function setLoginStatus(message, type = "") {
+  loginStatusEl.className = "statusNote";
+
+  if (type === "bad") {
+    loginStatusEl.classList.add("bad");
+  }
+
+  loginStatusEl.textContent = message;
+}
+
+function setLoginLoading(isLoading) {
+  loginBtn.disabled = isLoading;
+  loginBtn.textContent = isLoading ? "Signing In..." : "Sign In";
+  studentIdInput.disabled = isLoading;
+  studentCodeInput.disabled = isLoading;
+}
+
+function updateSessionBar() {
+  if (!authenticatedStudent) {
+    sessionBar.classList.add("hidden");
+    return;
+  }
+
+  sessionNameEl.textContent = authenticatedStudent.name;
+  sessionMetaEl.textContent = `${authenticatedStudent.className} · ${authenticatedStudent.school}`;
+  sessionBar.classList.remove("hidden");
+}
+
+function clearPracticeState() {
+  clearAutoNextTimer();
+  cancelSpeech();
+  currentTextbook = null;
+  activeQuestions = [];
+  score = 0;
+  qIndex = 0;
+  wordInput.value = "";
+  hideAnswerReveal();
+  resetAiChatState(null);
+  setQuestionLocked(true);
+  setFeedback("");
+  updateSelectedTextbookCopy();
+  updateTop();
+  updateProgress();
+}
+
+function showLogin() {
+  clearPracticeState();
+  showScreen(login);
 }
 
 function setQuestionLocked(locked) {
@@ -259,6 +344,157 @@ function updateSelectedTextbookCopy() {
   selectedTextbookNameEl.textContent = currentTextbook.audience;
   selectedTextbookMetaEl.textContent = `${activeQuestions.length} drills · ${currentTextbook.level}`;
   resultTextbookEl.textContent = `Textbook: ${currentTextbook.title}`;
+}
+
+function normalizeStudentDirectory(payload) {
+  const students = Array.isArray(payload) ? payload : payload && Array.isArray(payload.students) ? payload.students : null;
+
+  if (!students) {
+    throw new Error("Invalid student roster payload.");
+  }
+
+  return students.map((student) => ({
+    ...student,
+    id: normalizeStudentId(student.id || "")
+  }));
+}
+
+function renderDemoAccessCards() {
+  demoAccessGrid.innerHTML = "";
+
+  studentDirectory.forEach((student) => {
+    const card = document.createElement("article");
+    card.className = "demoAccessCard";
+    card.innerHTML = `
+      <strong>${student.name}</strong>
+      <span>${student.className}</span>
+      <span>ID: ${student.id}</span>
+      <span>Code: ${student.password}</span>
+    `;
+    demoAccessGrid.appendChild(card);
+  });
+}
+
+async function loadStudentDirectory() {
+  if (studentDirectory.length > 0) {
+    return studentDirectory;
+  }
+
+  if (!studentDirectoryPromise) {
+    studentDirectoryPromise = fetch(STUDENT_ROSTER_URL, { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Unable to load student roster (${response.status}).`);
+        }
+
+        return response.json();
+      })
+      .then((payload) => {
+        studentDirectory = normalizeStudentDirectory(payload);
+        renderDemoAccessCards();
+        return studentDirectory;
+      })
+      .catch((error) => {
+        studentDirectoryPromise = null;
+        throw error;
+      });
+  }
+
+  return studentDirectoryPromise;
+}
+
+async function ensureStudentDirectoryLoaded() {
+  if (studentDirectory.length > 0) {
+    setLoginStatus(`${studentDirectory.length} student accounts ready for demo access.`);
+    return true;
+  }
+
+  setLoginLoading(true);
+  setLoginStatus("Loading student access...");
+
+  try {
+    await loadStudentDirectory();
+    setLoginStatus(`${studentDirectory.length} student accounts ready for demo access.`);
+    return true;
+  } catch (error) {
+    console.error(error);
+    setLoginStatus("Unable to load student access. Refresh the page or run the app from a local server.", "bad");
+    return false;
+  } finally {
+    setLoginLoading(false);
+  }
+}
+
+function findStudentByCredentials(studentId, password) {
+  const normalizedId = normalizeStudentId(studentId);
+  return studentDirectory.find((student) => student.id === normalizedId && student.password === password) || null;
+}
+
+function saveStudentSession(student) {
+  authenticatedStudent = student;
+  sessionStorage.setItem(AUTH_SESSION_KEY, student.id);
+  updateSessionBar();
+}
+
+function restoreStudentSession() {
+  const studentId = sessionStorage.getItem(AUTH_SESSION_KEY);
+  if (!studentId) {
+    return false;
+  }
+
+  const student = studentDirectory.find((entry) => entry.id === normalizeStudentId(studentId));
+  if (!student) {
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    return false;
+  }
+
+  authenticatedStudent = student;
+  updateSessionBar();
+  return true;
+}
+
+async function loginStudent() {
+  const isRosterReady = await ensureStudentDirectoryLoaded();
+  if (!isRosterReady) {
+    return;
+  }
+
+  const studentId = studentIdInput.value.trim();
+  const password = studentCodeInput.value.trim();
+
+  if (!studentId || !password) {
+    setLoginFeedback("Enter both the student ID and access code.", "bad");
+    return;
+  }
+
+  setLoginLoading(true);
+
+  try {
+    const student = findStudentByCredentials(studentId, password);
+
+    if (!student) {
+      setLoginFeedback("Student ID or access code is not correct.", "bad");
+      return;
+    }
+
+    saveStudentSession(student);
+    setLoginFeedback(`Welcome, ${student.name}.`, "good");
+    studentIdInput.value = "";
+    studentCodeInput.value = "";
+    showHome();
+  } finally {
+    setLoginLoading(false);
+  }
+}
+
+function logoutStudent() {
+  authenticatedStudent = null;
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
+  updateSessionBar();
+  setLoginFeedback("");
+  studentIdInput.value = "";
+  studentCodeInput.value = "";
+  showLogin();
 }
 
 function getNormalizedWords(sentence) {
@@ -674,6 +910,11 @@ function renderTextbookLibrary() {
 }
 
 async function showLibrary() {
+  if (!authenticatedStudent) {
+    showLogin();
+    return;
+  }
+
   const isLoaded = await ensureTextbookContentLoaded();
   if (!isLoaded) {
     showScreen(home);
@@ -713,6 +954,11 @@ function loadQuestion() {
 }
 
 function startTextbook(textbookId) {
+  if (!authenticatedStudent) {
+    showLogin();
+    return;
+  }
+
   const textbook = textbookCollections.find((item) => item.id === textbookId);
   if (!textbook) {
     return;
@@ -851,6 +1097,11 @@ function finish() {
 }
 
 function showHome() {
+  if (!authenticatedStudent) {
+    showLogin();
+    return;
+  }
+
   clearAutoNextTimer();
   cancelSpeech();
   hideAnswerReveal();
@@ -873,12 +1124,23 @@ async function initializeApp() {
   updateSelectedTextbookCopy();
   updateTop();
   rateVal.textContent = parseFloat(rateSlider.value).toFixed(1);
-  await ensureTextbookContentLoaded();
+  updateSessionBar();
+
+  await Promise.all([ensureTextbookContentLoaded(), ensureStudentDirectoryLoaded()]);
+
+  if (restoreStudentSession()) {
+    showHome();
+    return;
+  }
+
+  showScreen(login);
 }
 
+loginBtn.addEventListener("click", loginStudent);
 startBtn.addEventListener("click", showLibrary);
 restartBtn.addEventListener("click", showLibrary);
 libraryBackBtn.addEventListener("click", showHome);
+logoutBtn.addEventListener("click", logoutStudent);
 
 playBtn.addEventListener("click", playCurrentSentence);
 repeatBtn.addEventListener("click", playCurrentSentence);
@@ -888,6 +1150,16 @@ rateSlider.addEventListener("input", () => {
 });
 
 addBtn.addEventListener("click", checkAnswer);
+studentIdInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    loginStudent();
+  }
+});
+studentCodeInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    loginStudent();
+  }
+});
 wordInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     checkAnswer();

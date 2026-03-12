@@ -49,6 +49,45 @@ body::before{
   padding:36px 20px 56px;
 }
 
+.sessionBar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:18px;
+  padding:14px 18px;
+  border:1px solid var(--line);
+  border-radius:22px;
+  background:rgba(255, 253, 248, 0.88);
+  box-shadow:0 18px 40px rgba(35, 29, 24, 0.08);
+}
+
+.sessionIdentity{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+}
+
+.sessionLabel,
+.sessionMeta{
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.sessionName{
+  font-size:1rem;
+  font-weight:800;
+  color:var(--ink);
+}
+
+.sessionLogoutBtn{
+  min-width:120px;
+}
+
 .card{
   background:linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(255, 248, 238, 0.96));
   border:1px solid var(--line);
@@ -60,6 +99,10 @@ body::before{
 
 .heroCard{
   padding:40px;
+}
+
+.loginCard{
+  padding:36px;
 }
 
 .libraryCard,
@@ -117,6 +160,86 @@ h3{
   color:var(--muted);
   line-height:1.75;
   font-size:1.04rem;
+}
+
+.loginGrid{
+  display:grid;
+  grid-template-columns:minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap:28px;
+  align-items:stretch;
+}
+
+.loginCopy{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:18px;
+}
+
+.loginPanel{
+  padding:28px;
+  border-radius:28px;
+  background:rgba(255, 255, 255, 0.74);
+  border:1px solid rgba(23, 32, 51, 0.08);
+}
+
+.fieldStack{
+  display:grid;
+  gap:16px;
+  margin-top:22px;
+}
+
+.fieldGroup{
+  display:grid;
+  gap:8px;
+}
+
+.fieldLabel{
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.loginBtn{
+  width:100%;
+  margin-top:18px;
+}
+
+.loginFeedback{
+  margin:14px 0 0;
+}
+
+.demoAccessGrid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:14px;
+  margin-top:14px;
+}
+
+.demoAccessCard{
+  padding:16px;
+  border-radius:22px;
+  background:rgba(255, 255, 255, 0.72);
+  border:1px solid rgba(23, 32, 51, 0.08);
+}
+
+.demoAccessCard strong,
+.demoAccessCard span{
+  display:block;
+}
+
+.demoAccessCard strong{
+  color:var(--ink);
+  font-size:1rem;
+}
+
+.demoAccessCard span{
+  margin-top:6px;
+  color:var(--muted);
+  line-height:1.5;
+  font-size:.95rem;
 }
 
 .heroGrid{
@@ -723,12 +846,15 @@ h3{
 }
 
 @media (max-width: 980px){
+  .loginGrid,
   .heroGrid,
   .featureGrid,
+  .demoAccessGrid,
   .textbookGrid{
     grid-template-columns:1fr;
   }
 
+  .sessionBar,
   .libraryHeader,
   .practiceHeader{
     flex-direction:column;
@@ -739,6 +865,7 @@ h3{
   }
 
   .heroCard,
+  .loginCard,
   .libraryCard,
   .practiceCard,
   .resultCard{
@@ -752,6 +879,7 @@ h3{
   }
 
   .heroCard,
+  .loginCard,
   .libraryCard,
   .practiceCard,
   .resultCard{
@@ -760,6 +888,7 @@ h3{
   }
 
   .ctaRow,
+  .sessionBar,
   .libraryHeader,
   .textbookMeta,
   .selectionSummary,

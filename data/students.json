@@ -1,0 +1,26 @@
+{
+  "version": "2026-03-12",
+  "students": [
+    {
+      "id": "S1001",
+      "password": "lingo1001",
+      "name": "Ava Chen",
+      "className": "Grade 6A",
+      "school": "LingoDictation Demo School"
+    },
+    {
+      "id": "S1002",
+      "password": "lingo1002",
+      "name": "Ethan Wu",
+      "className": "Grade 7B",
+      "school": "LingoDictation Demo School"
+    },
+    {
+      "id": "S1003",
+      "password": "lingo1003",
+      "name": "Sophia Li",
+      "className": "Grade 8A",
+      "school": "LingoDictation Demo School"
+    }
+  ]
+}
