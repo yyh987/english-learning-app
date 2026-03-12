@@ -2,9 +2,9 @@ const POINTS_PER_QUESTION = 10;
 const AUTO_NEXT_DELAY_MS = 800;
 const AUTO_PLAY_COUNT = 2;
 const REPEAT_PAUSE_MS = 900;
-const MAX_WRONG_HISTORY = 5;
-const TEXTBOOK_CONTENT_URL = "data/textbooks.json?v=20260312b";
-const STUDENT_ROSTER_URL = "data/students.json?v=20260312b";
+const MAX_WRONG_HISTORY = 3;
+const TEXTBOOK_CONTENT_URL = "data/textbooks.json?v=20260312c";
+const STUDENT_ROSTER_URL = "data/students.json?v=20260312c";
 const AUTH_SESSION_KEY = "lingodictation-student-id";
 const AI_CHAT_API_URL =
   window.LingoDictationConfig &&
