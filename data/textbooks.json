@@ -1,5 +1,5 @@
 {
-  "version": "2026-03-10",
+  "version": "2026-03-12",
   "textbooks": [
     {
       "id": "starter-listening",
@@ -144,6 +144,70 @@
             "vocabulary": {
               "summarize": "to give the main points briefly",
               "passage": "a section of written text"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "toefl-test-textbook",
+      "title": "TOEFL Test Textbook",
+      "level": "Advanced",
+      "audience": "TOEFL preparation",
+      "description": "Lecture-style and academic listening sentences designed for TOEFL-style note-taking and response accuracy.",
+      "questions": [
+        {
+          "sentence": "The professor argued that migration patterns shift when food sources become less predictable.",
+          "support": {
+            "meaning": "The professor said animals or people may move differently when food is harder to predict.",
+            "listeningFocus": "Listen for the reporting verb \"argued\" and the cause phrase \"when food sources become less predictable\".",
+            "vocabulary": {
+              "migration patterns": "the usual ways people or animals move from one place to another",
+              "predictable": "able to be expected in advance"
+            }
+          }
+        },
+        {
+          "sentence": "According to the lecture, urban planners must balance economic growth with environmental protection.",
+          "support": {
+            "meaning": "The lecture says city planners need to support the economy while also protecting nature.",
+            "listeningFocus": "Catch the source phrase \"According to the lecture\" and the paired idea \"economic growth with environmental protection\".",
+            "vocabulary": {
+              "urban planners": "people who design and organize city development",
+              "environmental protection": "actions that protect the natural world"
+            }
+          }
+        },
+        {
+          "sentence": "The speaker suggested that the decline was gradual rather than the result of a single event.",
+          "support": {
+            "meaning": "The speaker believed the decrease happened slowly, not because of one sudden event.",
+            "listeningFocus": "Focus on the contrast structure \"gradual rather than\" and the ending phrase \"a single event\".",
+            "vocabulary": {
+              "decline": "a decrease or reduction",
+              "gradual": "happening slowly over time"
+            }
+          }
+        },
+        {
+          "sentence": "Students were expected to infer the author’s attitude from tone, evidence, and word choice.",
+          "support": {
+            "meaning": "Students needed to figure out how the author felt by using tone, evidence, and vocabulary.",
+            "listeningFocus": "Listen for the academic verb \"infer\" and the three-part list at the end of the sentence.",
+            "vocabulary": {
+              "infer": "to figure something out from clues",
+              "word choice": "the specific words an author decides to use"
+            }
+          }
+        },
+        {
+          "sentence": "As the experiment progressed, the researchers revised their hypothesis to match the new data.",
+          "support": {
+            "meaning": "While the experiment continued, the researchers changed their idea so it fit the new information.",
+            "listeningFocus": "Catch the time opener \"As the experiment progressed\" and the verb phrase \"revised their hypothesis\".",
+            "vocabulary": {
+              "hypothesis": "an idea or explanation that can be tested",
+              "data": "facts or information collected for study"
             }
           }
         }
